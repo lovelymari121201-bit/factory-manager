@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Floorline — Manufacturing Workforce Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F5F3EF;
+    --ink:#20241F;
+    --ink-soft:#565F58;
+    --steel:#3A4750;
+    --steel-dark:#262E34;
+    --orange:#E8622C;
+    --orange-dark:#C64F1F;
+    --green:#4C7A5A;
+    --green-bg:#E7EFE8;
+    --amber:#B8862E;
+    --amber-bg:#F5EBD8;
+    --red:#B23A2E;
+    --red-bg:#F5E4E1;
+    --line:#D9D4C9;
+    --panel:#FFFFFF;
+    --panel-alt:#EFEBE2;
+    --radius:3px;
+    font-size:16px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3,.display{font-family:'Big Shoulders Display',sans-serif;font-weight:800;letter-spacing:0.01em;color:var(--ink);}
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;font-size:0.95rem;}
+  ::selection{background:var(--orange);color:#fff;}
+
+  #app{min-height:100vh;display:flex;flex-direction:column;}
+
+  /* ---------- LOGIN ---------- */
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--steel-dark);}
+  .login-card{background:var(--panel);width:100%;max-width:420px;padding:36px 30px 30px;position:relative;border-top:6px solid var(--orange);}
+  .login-brand{display:flex;align-items:baseline;gap:10px;margin-bottom:4px;}
+  .login-brand .mark{width:14px;height:14px;background:var(--orange);transform:rotate(45deg);flex:none;}
+  .login-brand h1{font-size:1.9rem;margin:0;line-height:1;}
+  .login-sub{color:var(--ink-soft);font-size:0.88rem;margin:2px 0 28px;}
+  .role-row{display:flex;gap:10px;margin-bottom:18px;}
+  .role-btn{flex:1;padding:14px 8px;border:1px solid var(--line);background:var(--panel-alt);border-radius:var(--radius);font-weight:700;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-soft);transition:.15s;}
+  .role-btn.active{background:var(--steel);color:#fff;border-color:var(--steel);}
+  .field-label{font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-soft);font-weight:600;display:block;margin-bottom:6px;}
+  .field{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:var(--radius);background:#fff;margin-bottom:16px;color:var(--ink);}
+  .field:focus{outline:2px solid var(--orange);outline-offset:1px;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 18px;border-radius:var(--radius);border:none;font-weight:700;font-size:0.9rem;transition:.12s;}
+  .btn-primary{background:var(--orange);color:#fff;width:100%;}
+  .btn-primary:hover{background:var(--orange-dark);}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink);}
+  .btn-sm{padding:7px 12px;font-size:0.82rem;}
+  .btn:disabled{opacity:0.45;cursor:not-allowed;}
+  .login-error{color:var(--red);font-size:0.85rem;margin:-8px 0 14px;}
+  .login-hint{margin-top:18px;font-size:0.78rem;color:var(--ink-soft);text-align:center;}
+
+  /* ---------- SHELL ---------- */
+  .shell{display:flex;flex:1;min-height:100vh;}
+  .sidebar{width:224px;flex:none;background:var(--steel-dark);color:#fff;display:flex;flex-direction:column;padding:22px 0;}
+  .sb-brand{display:flex;align-items:center;gap:9px;padding:0 20px 20px;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:14px;}
+  .sb-brand .mark{width:11px;height:11px;background:var(--orange);transform:rotate(45deg);flex:none;}
+  .sb-brand span{font-family:'Big Shoulders Display';font-weight:800;font-size:1.25rem;}
+  .sb-user{padding:0 20px 18px;font-size:0.8rem;color:rgba(255,255,255,0.55);}
+  .sb-user b{color:#fff;display:block;font-size:0.92rem;font-weight:600;}
+  .sb-nav{flex:1;display:flex;flex-direction:column;gap:2px;padding:0 10px;}
+  .sb-link{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:var(--radius);color:rgba(255,255,255,0.7);font-size:0.88rem;font-weight:500;background:none;border:none;text-align:left;width:100%;}
+  .sb-link .ico{width:18px;text-align:center;flex:none;}
+  .sb-link:hover{background:rgba(255,255,255,0.06);color:#fff;}
+  .sb-link.active{background:var(--orange);color:#fff;font-weight:700;}
+  .sb-foot{padding:14px 20px 0;border-top:1px solid rgba(255,255,255,0.1);margin-top:10px;}
+  .sb-foot button{color:rgba(255,255,255,0.6);background:none;border:none;font-size:0.82rem;padding:8px 0;}
+  .sb-foot button:hover{color:#fff;}
+
+  .main{flex:1;min-width:0;padding:28px 32px 60px;}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;flex-wrap:wrap;gap:10px;}
+  .topbar h2{font-size:1.7rem;margin:0;}
+  .topbar .sub{color:var(--ink-soft);font-size:0.88rem;margin-top:2px;}
+  .date-pill{background:var(--panel-alt);border:1px solid var(--line);border-radius:var(--radius);padding:8px 14px;font-size:0.82rem;color:var(--ink-soft);font-weight:600;}
+
+  @media (max-width:860px){
+    .sidebar{display:none;}
+    .main{padding:16px 14px 50px;}
+    .mobile-topbar{display:flex !important;}
+  }
+
+  .mobile-topbar{display:none;align-items:center;justify-content:space-between;background:var(--steel-dark);color:#fff;padding:13px 14px;margin:-16px -14px 18px;}
+  .mobile-topbar .left-group{display:flex;align-items:center;gap:10px;}
+  .mobile-topbar .mark{width:10px;height:10px;background:var(--orange);transform:rotate(45deg);}
+  .mobile-topbar .brand{display:flex;align-items:center;gap:8px;font-family:'Big Shoulders Display';font-weight:800;font-size:1.15rem;}
+  .mobile-topbar button.logout-m{background:none;border:none;color:rgba(255,255,255,0.7);font-size:0.78rem;font-weight:600;}
+  .hamburger-btn{background:none;border:1px solid rgba(255,255,255,0.25);border-radius:var(--radius);color:#fff;font-size:1.15rem;line-height:1;padding:6px 10px;}
+
+  /* ---------- HAMBURGER DRAWER ---------- */
+  .drawer-overlay{position:fixed;inset:0;background:rgba(32,36,31,0.55);z-index:150;display:none;}
+  .drawer-overlay.open{display:block;}
+  .drawer-panel{position:fixed;top:0;left:0;bottom:0;width:250px;background:var(--steel-dark);color:#fff;z-index:151;transform:translateX(-105%);transition:transform .22s ease;display:flex;flex-direction:column;padding:18px 0;}
+  .drawer-panel.open{transform:translateX(0);}
+  .drawer-head{display:flex;justify-content:space-between;align-items:center;padding:0 16px 16px;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:10px;}
+  .drawer-head .brand{display:flex;align-items:center;gap:8px;font-family:'Big Shoulders Display';font-weight:800;font-size:1.15rem;}
+  .drawer-close{background:none;border:none;color:rgba(255,255,255,0.6);font-size:1.3rem;line-height:1;}
+
+  /* ---------- CARDS / GRID ---------- */
+  .grid{display:grid;gap:14px;}
+  .grid-4{grid-template-columns:repeat(4,1fr);}
+  .grid-3{grid-template-columns:repeat(3,1fr);}
+  .grid-2{grid-template-columns:repeat(2,1fr);}
+  @media (max-width:860px){.grid-4,.grid-3,.grid-2{grid-template-columns:1fr 1fr;}}
+  @media (max-width:520px){.grid-4,.grid-3,.grid-2{grid-template-columns:1fr;}}
+
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;position:relative;overflow:hidden;}
+  .stat::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--stat-color,var(--orange));}
+  .stat .num{font-family:'Big Shoulders Display';font-size:2.2rem;font-weight:800;line-height:1;margin:4px 0 2px;}
+  .stat .lbl{font-size:0.78rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin-bottom:18px;}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px;flex-wrap:wrap;}
+  .panel-head h3{margin:0;font-size:1.2rem;}
+
+  table{width:100%;border-collapse:collapse;font-size:0.88rem;}
+  th{text-align:left;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-soft);border-bottom:2px solid var(--ink);padding:0 10px 8px;font-weight:700;}
+  td{padding:10px 10px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  .table-wrap{overflow-x:auto;}
+  .empty-row td{text-align:center;color:var(--ink-soft);padding:26px 10px;font-style:normal;}
+
+  .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.02em;white-space:nowrap;}
+  .badge-green{background:var(--green-bg);color:var(--green);}
+  .badge-amber{background:var(--amber-bg);color:var(--amber);}
+  .badge-red{background:var(--red-bg);color:var(--red);}
+  .badge-steel{background:#E7EAEC;color:var(--steel);}
+  .badge-locked{background:#E7E2D6;color:var(--ink-soft);}
+
+  .form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px 14px;margin-bottom:6px;}
+  label.field-label{margin-top:2px;}
+  .form-error{color:var(--red);font-size:0.82rem;margin:-8px 0 12px;font-weight:600;}
+
+  .icon-btn{background:none;border:1px solid var(--line);border-radius:var(--radius);width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;color:var(--ink-soft);}
+  .icon-btn:hover{border-color:var(--orange);color:var(--orange);}
+
+  .mini-time{width:104px;padding:7px 8px;border:1px solid var(--line);border-radius:var(--radius);}
+
+  /* ---------- WORK ORDER CARD ---------- */
+  .wo-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:16px;overflow:hidden;position:relative;}
+  .wo-card::after{content:'';position:absolute;top:0;left:0;bottom:0;width:5px;background:var(--wo-color,var(--steel));}
+  .wo-top{display:flex;gap:14px;padding:16px 18px 14px 22px;}
+  .wo-img{width:88px;height:88px;flex:none;border-radius:var(--radius);object-fit:cover;background:var(--panel-alt);border:1px solid var(--line);cursor:pointer;}
+  .wo-img-empty{width:88px;height:88px;flex:none;border-radius:var(--radius);background:var(--panel-alt);border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;color:var(--ink-soft);font-size:0.65rem;text-align:center;padding:4px;}
+  .wo-id{font-size:0.7rem;color:var(--ink-soft);font-weight:700;letter-spacing:0.04em;}
+  .wo-title{font-family:'Big Shoulders Display';font-weight:800;font-size:1.25rem;margin:1px 0 4px;line-height:1.05;}
+  .wo-meta{font-size:0.8rem;color:var(--ink-soft);}
+  .wo-instr{padding:0 18px 14px 22px;font-size:0.86rem;color:var(--ink);border-bottom:1px solid var(--line);padding-bottom:16px;}
+  .wo-progress-wrap{padding:14px 18px 18px 22px;}
+  .prog-nums{display:flex;justify-content:space-between;font-size:0.78rem;color:var(--ink-soft);margin-bottom:6px;font-weight:600;}
+  .prog-nums b{color:var(--ink);font-size:0.95rem;}
+  .prog-bar{height:9px;background:var(--panel-alt);border-radius:20px;overflow:hidden;border:1px solid var(--line);}
+  .prog-fill{height:100%;background:var(--green);border-radius:20px;transition:width .3s;}
+  .prog-fill.low{background:var(--orange);}
+  .qty-row{display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap;}
+  .qty-input{width:90px;padding:9px 10px;border:1px solid var(--line);border-radius:var(--radius);text-align:center;font-weight:700;}
+  .qty-btn{width:38px;height:38px;border-radius:var(--radius);border:1px solid var(--line);background:var(--panel-alt);font-size:1.1rem;font-weight:700;color:var(--ink);}
+  .qty-btn:hover{background:var(--orange);border-color:var(--orange);color:#fff;}
+  .qty-save{margin-left:auto;}
+  .locked-note{font-size:0.8rem;color:var(--ink-soft);font-style:normal;margin-top:12px;padding:10px 12px;background:var(--panel-alt);border-radius:var(--radius);}
+
+  .modal-bg{position:fixed;inset:0;background:rgba(32,36,31,0.55);display:flex;align-items:flex-start;justify-content:center;padding:26px 16px;overflow-y:auto;z-index:100;}
+  .modal{background:#fff;width:100%;max-width:560px;border-radius:var(--radius);padding:26px 26px 22px;margin-top:20px;border-top:5px solid var(--orange);}
+  .modal h3{margin:0 0 4px;}
+  .modal .close-x{position:absolute;top:14px;right:16px;background:none;border:none;font-size:1.3rem;color:var(--ink-soft);}
+  .modal-inner{position:relative;}
+  .img-upload{border:1.5px dashed var(--line);border-radius:var(--radius);padding:16px;text-align:center;cursor:pointer;color:var(--ink-soft);font-size:0.85rem;background:var(--panel-alt);}
+  .img-upload.required{border-color:var(--orange);}
+  .img-preview{width:100%;max-height:180px;object-fit:contain;border-radius:var(--radius);margin-bottom:10px;}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;}
+  .modal-actions .btn{flex:1;}
+  .required-star{color:var(--orange);}
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 20px;border-radius:var(--radius);font-size:0.86rem;font-weight:600;z-index:200;box-shadow:0 4px 14px rgba(0,0,0,0.25);}
+
+  .empty-state{text-align:center;padding:50px 20px;color:var(--ink-soft);}
+  .empty-state .mark{width:34px;height:34px;background:var(--panel-alt);border:2px dashed var(--line);margin:0 auto 14px;transform:rotate(45deg);}
+
+  select.field{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23565F58'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:30px;}
+
+  .tab-strip{display:flex;gap:4px;border-bottom:2px solid var(--line);margin-bottom:18px;overflow-x:auto;}
+  .tab-btn{padding:10px 16px;background:none;border:none;font-weight:700;font-size:0.85rem;color:var(--ink-soft);border-bottom:3px solid transparent;white-space:nowrap;}
+  .tab-btn.active{color:var(--ink);border-color:var(--orange);}
+
+  .loading-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);background:var(--steel-dark);font-family:'Big Shoulders Display';font-size:1.2rem;}
+
+  /* ---------- LIGHTBOX ---------- */
+  .lightbox-overlay{position:fixed;inset:0;background:rgba(10,10,10,0.94);z-index:300;display:flex;align-items:center;justify-content:center;padding:26px;}
+  .lightbox-overlay img{max-width:100%;max-height:100%;border-radius:4px;}
+  .lightbox-close{position:absolute;top:18px;right:22px;background:none;border:1px solid rgba(255,255,255,0.3);color:#fff;font-size:1.4rem;line-height:1;width:40px;height:40px;border-radius:50%;}
+
+  .punch-btns{display:flex;gap:8px;flex-wrap:wrap;}
+
+  .work-remarks{margin-top:14px;padding-top:14px;border-top:1px solid var(--line);}
+  .remarks-input{margin-bottom:8px;resize:vertical;min-height:62px;}
+  @media (max-width:860px){
+    .main{min-width:0;max-width:100%;overflow-x:hidden;}
+    .worker-main{width:100%;padding-left:10px;padding-right:10px;box-sizing:border-box;}
+    .panel{padding:16px 14px;}
+    .wo-top{padding:14px 14px 12px 18px;}
+    .wo-instr,.wo-progress-wrap{padding-left:18px;padding-right:14px;}
+    .qty-save{margin-left:0;}
+    .topbar h2{font-size:1.5rem;}
+  }
+  @media (max-width:600px){
+    .grid-4,.grid-3,.grid-2{grid-template-columns:1fr;}
+    .form-row{grid-template-columns:1fr;}
+    .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;}
+    .table-wrap table{min-width:620px;table-layout:auto;}
+    .panel .table-wrap table{width:max-content;min-width:100%;}
+    th,td{padding:9px 6px;overflow-wrap:anywhere;word-break:break-word;}
+    th{font-size:.66rem;}
+    td{font-size:.8rem;}
+    .wo-top{align-items:flex-start;}
+    .wo-img,.wo-img-empty{width:68px;height:68px;}
+    .wo-title{font-size:1.1rem;}
+    .qty-row{gap:6px;}
+    .qty-input{width:76px;}
+    .punch-btns .btn{flex:1;min-width:0;}
+    .modal{padding:22px 16px 18px;margin-top:8px;}
+    .mobile-topbar{margin-left:-14px;margin-right:-14px;}
+  }
+
+
+  .dashboard-date{width:auto;margin-bottom:0;min-width:150px;}
+  .time-method{display:flex;gap:18px;flex-wrap:wrap;padding:10px 0 14px;font-size:.88rem;font-weight:700;}
+  .time-method label{display:flex;align-items:center;gap:7px;}
+  .overview-note{margin-top:12px;padding:10px 12px;background:var(--panel-alt);border-radius:var(--radius);font-size:.82rem;color:var(--ink-soft);}
+  @media (max-width:600px){.topbar{gap:10px;flex-wrap:wrap}.topbar .dashboard-date{width:100%;}.worker-main .topbar{padding-top:4px}.worker-main .tab-strip{margin-left:-4px;margin-right:-4px}.worker-main .panel{width:100%;box-sizing:border-box}.wo-card{max-width:100%;}.wo-top>div:last-child{min-width:0;overflow-wrap:anywhere}.btn{max-width:100%;}.form-row>*{min-width:0;}.field{max-width:100%;box-sizing:border-box}.table-wrap{border-bottom:1px solid var(--line);}.table-wrap table{min-width:620px;}}
+</style>
+<!--
+  PRODUCTION DEPLOYMENT:
+  This browser app must use a secure backend/API in production.
+  Do NOT place Aiven database credentials in this HTML.
+  Set window.FLOORLINE_API_BASE_URL to your HTTPS backend URL and have that
+  backend read/write the Aiven database. The existing window.storage adapter
+  can remain for the current embedded/demo environment.
+-->
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ============================================================
+   FLOORLINE — Manufacturing Workforce Manager
+   Single-file app. Shared persistent storage via window.storage.
+   ============================================================ */
+
+const FLOORLINE_API_BASE_URL = (window.FLOORLINE_API_BASE_URL || ((location.protocol==='http:' || location.protocol==='https:') ? location.origin : '')).replace(/\/$/,'');
+
+const STORE_KEYS = ['fl_employees','fl_workorders','fl_attendance','fl_permissions','fl_leaves','fl_sundayot','fl_finance','fl_powercuts','fl_invoices'];
+const LOCK_DAYS = 5;
+
+let state = {
+  loaded:false,
+  role:null,
+  currentWorkerId:null,
+  adminView:'dashboard',
+  workerTab:'work',
+  employees:[],
+  workOrders:[],
+  attendance:[],
+  permissions:[],
+  leaves:[],
+  sundayOT:[],
+  finance:[],
+  powerCuts:[],
+  invoices:[],
+  toast:null,
+  modal:null,
+  imgDraft:null,
+  modalError:'',
+  drawerOpen:false,
+  lightboxImg:null,
+  adminAttDate:null,
+  workSubTab:'active',
+  adminDashDate:null,
+};
+
+function uid(prefix){ return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function todayStr(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function nowTimeStr(){ const d=new Date(); return d.toTimeString().slice(0,5); }
+function fmtDate(s){ if(!s) return '—'; const d=new Date(s+'T00:00:00'); return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }
+function isSunday(dateStr){ return new Date(dateStr+'T00:00:00').getDay()===0; }
+function woNumber(idx){ return 'WO-' + String(idx+1).padStart(4,'0'); }
+function empName(id){ const e=state.employees.find(x=>x.id===id); return e?e.name:'Unassigned'; }
+function showToast(msg){ state.toast=msg; render(); setTimeout(()=>{ state.toast=null; render(); }, 2400); }
+function daysSince(dateStr){ const a=new Date(todayStr()+'T00:00:00'); const b=new Date(dateStr+'T00:00:00'); return Math.round((a-b)/86400000); }
+function isLocked(w){ return daysSince(w.date || todayStr()) >= LOCK_DAYS; }
+
+function hasApprovedLeave(empId, date){
+  return state.leaves.some(l=>l.employeeId===empId && l.status==='approved' &&
+    l.startDate && l.endDate && date>=l.startDate && date<=l.endDate);
+}
+function attendanceStatus(empId, date){
+  const rec = state.attendance.find(a=>a.employeeId===empId && a.date===date);
+  if(isSunday(date)){
+    const ot = state.sundayOT.find(o=>o.employeeId===empId && o.date===date);
+    if(ot) return 'Sunday OT';
+    if(rec && rec.inTime) return 'Present';
+    return hasApprovedLeave(empId, date) ? 'Sunday Leave' : 'Absent';
+  }
+  return (rec && rec.inTime) ? 'Present' : (hasApprovedLeave(empId, date) ? 'Leave' : 'Absent');
+}
+function calcHours(inTime, outTime){
+  if(!inTime || !outTime) return 0;
+  const [ih,im] = inTime.split(':').map(Number);
+  const [oh,om] = outTime.split(':').map(Number);
+  let mins = (oh*60+om) - (ih*60+im);
+  if(mins < 0) mins += 24*60;
+  return Math.round((mins/60)*100)/100;
+}
+function statusBadgeClass(status){
+  if(status==='Present') return 'badge-green';
+  if(status==='Absent') return 'badge-red';
+  if(status==='Sunday OT') return 'badge-steel';
+  if(status==='Sunday Leave') return 'badge-amber';
+  return 'badge-steel';
+}
+function requestStatusLabel(status, kind){
+  if(status==='approved') return 'Approved';
+  if(status==='rejected') return kind==='leave' ? 'Leave Rejected' : 'Permission Rejected';
+  return 'Pending';
+}
+function requestStatusClass(status){
+  if(status==='approved') return 'badge-green';
+  if(status==='rejected') return 'badge-red';
+  return 'badge-amber';
+}
+
+/* ---------------- persistence ---------------- */
+async function loadAll(){
+  try{
+    const [emp, wo, att, perm, lv, ot, fin, pc, inv] = await Promise.all(STORE_KEYS.map(k=>safeGet(k)));
+    state.employees   = emp || [];
+    state.workOrders  = (wo || []).map(w=>({ date: todayStr(), ...w }));
+    state.attendance  = att || [];
+    state.permissions = (perm || []).map(p=>({ status:'approved', requestedBy:'admin', ...p }));
+    state.leaves      = (lv || []).map(l=>({ status:'approved', requestedBy:'admin', ...l }));
+    state.sundayOT    = ot || [];
+    state.finance      = (fin || []).map(x=>x.type==='owner_received'?{...x,type:'others'}:x);
+    state.powerCuts    = pc || [];
+    state.invoices     = inv || [];
+  }catch(e){ console.error('load error', e); }
+
+  if(state.employees.length===0){
+    state.employees = [
+      {id:uid('emp'), name:'Ravi Kumar', code:'EMP001', role:'Machine Operator', phone:''},
+      {id:uid('emp'), name:'Meena Iyer', code:'EMP002', role:'Assembly Worker', phone:''},
+      {id:uid('emp'), name:'Suresh Babu', code:'EMP003', role:'Quality Checker', phone:''},
+    ];
+    await safeSet('fl_employees', state.employees);
+  }
+  state.adminAttDate = todayStr();
+  state.adminDashDate = todayStr();
+  state.loaded = true;
+  render();
+}
+
+async function safeGet(key){
+  if(FLOORLINE_API_BASE_URL){
+    try{ const r=await fetch(FLOORLINE_API_BASE_URL+'/api/state/'+encodeURIComponent(key)); if(!r.ok) throw new Error('API '+r.status); const j=await r.json(); return j.value ?? null; }
+    catch(e){ console.error('API read failed',key,e); return null; }
+  }
+  try{ const res=await window.storage.get(key, true); return res ? JSON.parse(res.value) : null; }catch(e){ return null; }
+}
+async function safeSet(key, value){
+  if(FLOORLINE_API_BASE_URL){
+    try{ const r=await fetch(FLOORLINE_API_BASE_URL+'/api/state/'+encodeURIComponent(key),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({value})}); if(!r.ok) throw new Error('API '+r.status); return true; }
+    catch(e){ console.error('API save failed',key,e); showToast('⚠ Could not save to server'); return false; }
+  }
+  try{ await window.storage.set(key, JSON.stringify(value), true); return true; }catch(e){ console.error('save failed', key, e); showToast('⚠ Could not save — try again'); return false; }
+}
+function persist(field, key){ return safeSet(key, state[field]); }
+
+/* ---------------- image resize ---------------- */
+function readAndResizeImage(file, cb){
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const img = new Image();
+    img.onload = function(){
+      const maxW = 480;
+      const scale = Math.min(1, maxW / img.width);
+      const w = Math.round(img.width*scale), h = Math.round(img.height*scale);
+      const canvas = document.createElement('canvas');
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      cb(canvas.toDataURL('image/jpeg',0.72));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ================= RENDER ROOT ================= */
+function render(){
+  const app = document.getElementById('app');
+  if(!state.loaded){ app.innerHTML = `<div class="loading-screen">LOADING FLOORLINE…</div>`; return; }
+  if(!state.role){ app.innerHTML = renderLogin(); attachLoginEvents(); return; }
+  if(state.role==='admin'){ app.innerHTML = renderAdminShell(); attachAdminEvents(); attachGlobalEvents(); return; }
+  if(state.role==='worker'){ app.innerHTML = renderWorkerShell(); attachWorkerEvents(); attachGlobalEvents(); return; }
+}
+
+function attachGlobalEvents(){
+  document.querySelectorAll('[data-lightbox]').forEach(el=>el.addEventListener('click', ()=>{
+    state.lightboxImg = el.dataset.lightbox; render();
+  }));
+  const lbClose = document.getElementById('lightbox-close');
+  if(lbClose) lbClose.addEventListener('click', ()=>{ state.lightboxImg=null; render(); });
+  const lbOverlay = document.getElementById('lightbox-overlay');
+  if(lbOverlay) lbOverlay.addEventListener('click', (e)=>{ if(e.target.id==='lightbox-overlay'){ state.lightboxImg=null; render(); } });
+
+  const hbBtn = document.getElementById('drawer-toggle');
+  if(hbBtn) hbBtn.addEventListener('click', ()=>{ state.drawerOpen = true; render(); });
+  const drawerClose = document.getElementById('drawer-close');
+  if(drawerClose) drawerClose.addEventListener('click', ()=>{ state.drawerOpen = false; render(); });
+  const drawerOverlay = document.getElementById('drawer-overlay');
+  if(drawerOverlay) drawerOverlay.addEventListener('click', (e)=>{ if(e.target.id==='drawer-overlay'){ state.drawerOpen=false; render(); } });
+}
+
+function renderLightbox(){
+  if(!state.lightboxImg) return '';
+  return `<div class="lightbox-overlay" id="lightbox-overlay">
+    <button class="lightbox-close" id="lightbox-close">✕</button>
+    <img src="${state.lightboxImg}" alt="Work item full view">
+  </div>`;
+}
+
+/* ================= LOGIN ================= */
+let loginRole = 'worker';
+let loginError = '';
+function renderLogin(){
+  const workerOptions = state.employees.map(e=>`<option value="${e.id}">${e.name} — ${e.code}</option>`).join('');
+  return `
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-brand"><div class="mark"></div><h1>Floorline</h1></div>
+      <div class="login-sub">Attendance · assignments · production tracking</div>
+      <div class="role-row">
+        <button class="role-btn ${loginRole==='worker'?'active':''}" data-role="worker">Worker</button>
+        <button class="role-btn ${loginRole==='admin'?'active':''}" data-role="admin">Admin</button>
+      </div>
+      ${loginRole==='admin' ? `
+        <label class="field-label">Admin PIN</label>
+        <input type="password" class="field" id="admin-pin" placeholder="Enter PIN (demo: 1234)" maxlength="4">
+      ` : `
+        <label class="field-label">Select your name</label>
+        <select class="field" id="worker-select">
+          <option value="">— Choose your name —</option>
+          ${workerOptions}
+        </select>
+      `}
+      ${loginError ? `<div class="login-error">${loginError}</div>` : ''}
+      <button class="btn btn-primary" id="login-btn">Continue</button>
+      <div class="login-hint">Admin PIN for this demo is <b>1234</b>. Workers pick their name from the list an admin has set up.</div>
+    </div>
+  </div>`;
+}
+function attachLoginEvents(){
+  document.querySelectorAll('.role-btn').forEach(b=>b.addEventListener('click', ()=>{ loginRole=b.dataset.role; loginError=''; render(); }));
+  document.getElementById('login-btn').addEventListener('click', ()=>{
+    if(loginRole==='admin'){
+      const pin = document.getElementById('admin-pin').value;
+      if(pin!=='1234'){ loginError='Incorrect PIN.'; render(); return; }
+      state.role='admin'; loginError=''; render();
+    }else{
+      const wid = document.getElementById('worker-select').value;
+      if(!wid){ loginError='Please select your name.'; render(); return; }
+      state.role='worker'; state.currentWorkerId=wid; loginError=''; render();
+    }
+  });
+}
+function logout(){ state.role=null; state.currentWorkerId=null; loginError=''; loginRole='worker'; state.drawerOpen=false; render(); }
+
+/* ================= ADMIN SHELL ================= */
+const ADMIN_NAV = [
+  {id:'dashboard', label:'Dashboard', ico:'▣'},
+  {id:'employees', label:'Employees', ico:'☺'},
+  {id:'attendance', label:'Attendance', ico:'⏱'},
+  {id:'permissions', label:'Permissions', ico:'↪'},
+  {id:'leave', label:'Leave', ico:'☐'},
+  {id:'sundayot', label:'Sunday OT', ico:'✚'},
+  {id:'work', label:'Work Orders', ico:'▤'},
+  {id:'finance', label:'Financials', ico:'₹'},
+  {id:'powercut', label:'Power Cut Timings', ico:'⚡'},
+  {id:'invoice', label:'Invoice / DC', ico:'⇄'},
+];
+function renderAdminShell(){
+  const nav = ADMIN_NAV.map(n=>`<button class="sb-link ${state.adminView===n.id?'active':''}" data-view="${n.id}"><span class="ico">${n.ico}</span>${n.label}</button>`).join('');
+  return `
+  <div class="shell">
+    <div class="sidebar">
+      <div class="sb-brand"><div class="mark"></div><span>Floorline</span></div>
+      <div class="sb-user">Signed in as<b>Admin</b></div>
+      <div class="sb-nav">${nav}</div>
+      <div class="sb-foot"><button id="logout-btn">Log out ⏎</button></div>
+    </div>
+    <div class="main">
+      <div class="mobile-topbar">
+        <div class="left-group">
+          <button class="hamburger-btn" id="drawer-toggle">☰</button>
+          <div class="brand"><div class="mark"></div>Floorline</div>
+        </div>
+        <button class="logout-m" id="logout-btn-m">Log out</button>
+      </div>
+      ${renderAdminView()}
+    </div>
+  </div>
+  ${renderDrawer(ADMIN_NAV, state.adminView, 'view')}
+  ${state.modal ? renderModal() : ''}
+  ${renderLightbox()}
+  ${state.toast ? `<div class="toast">${state.toast}</div>` : ''}
+  `;
+}
+function renderDrawer(navList, activeId, dataAttr){
+  const links = navList.map(n=>`<button class="sb-link ${activeId===n.id?'active':''}" data-drawer-nav="${n.id}" data-attr="${dataAttr}"><span class="ico">${n.ico}</span>${n.label}</button>`).join('');
+  return `
+  <div class="drawer-overlay ${state.drawerOpen?'open':''}" id="drawer-overlay">
+    <div class="drawer-panel ${state.drawerOpen?'open':''}">
+      <div class="drawer-head"><div class="brand"><div class="mark" style="width:9px;height:9px;background:var(--orange);transform:rotate(45deg);"></div>Floorline</div><button class="drawer-close" id="drawer-close">✕</button></div>
+      <div class="sb-nav">${links}</div>
+    </div>
+  </div>`;
+}
+function renderAdminView(){
+  switch(state.adminView){
+    case 'dashboard': return adminDashboard();
+    case 'employees': return adminEmployees();
+    case 'attendance': return adminAttendance();
+    case 'permissions': return adminPermissions();
+    case 'leave': return adminLeave();
+    case 'sundayot': return adminSundayOT();
+    case 'work': return adminWork();
+    case 'finance': return adminFinance();
+    case 'powercut': return adminPowerCuts();
+    case 'invoice': return adminInvoices();
+    default: return '';
+  }
+}
+
+/* ---- Dashboard ---- */
+function adminDashboard(){
+  const date = state.adminDashDate || todayStr();
+  const present = state.employees.filter(e=>attendanceStatus(e.id,date)==='Present');
+  const absent = state.employees.filter(e=>attendanceStatus(e.id,date)==='Absent');
+  const sunLeave = state.employees.filter(e=>attendanceStatus(e.id,date)==='Sunday Leave');
+  const sunOt = state.employees.filter(e=>attendanceStatus(e.id,date)==='Sunday OT');
+  const dayOrders = state.workOrders.filter(w=>(w.date||'')===date);
+  const assigned = dayOrders.reduce((s,w)=>s+Number(w.total||0),0);
+  const completed = dayOrders.reduce((s,w)=>s+Number(w.completed||0),0);
+  const remaining = Math.max(0,assigned-completed);
+  const progress = assigned?Math.round(completed/assigned*100):0;
+  const cuts = state.powerCuts.filter(x=>x.date===date);
+  const outward = state.invoices.filter(x=>x.date===date && x.type==='Outward');
+  const inward = state.invoices.filter(x=>x.date===date && x.type==='Inward');
+  const recentWork = dayOrders.slice(0,6);
+  const woRows = recentWork.map(w=>{const p=w.total?Math.round(w.completed/w.total*100):0;return `<tr><td data-label="ID"><b>${woNumber(state.workOrders.indexOf(w))}</b></td><td data-label="Work">${w.title}</td><td data-label="Worker">${empName(w.assignedTo)}</td><td data-label="Progress"><div class="prog-bar"><div class="prog-fill ${p<50?'low':''}" style="width:${p}%"></div></div></td><td data-label="Pieces">${w.completed}/${w.total}</td></tr>`}).join('')||`<tr class="empty-row"><td colspan="5">No work assigned for this date.</td></tr>`;
+  const people = state.employees.map(e=>`<tr><td>${e.name}</td><td><span class="badge ${statusBadgeClass(attendanceStatus(e.id,date))}">${attendanceStatus(e.id,date)}</span></td></tr>`).join('')||`<tr class="empty-row"><td colspan="2">No employees.</td></tr>`;
+  const cutRows=cuts.map(x=>`<tr><td>${x.startTime||'—'}</td><td>${x.endTime||'—'}</td><td>${x.duration||calcHours(x.startTime,x.endTime)} hrs</td><td>${x.remarks||'—'}</td></tr>`).join('')||`<tr class="empty-row"><td colspan="4">No power-cut records.</td></tr>`;
+  const invRows=(arr)=>arr.map(x=>`<tr><td>${x.number||'—'}</td><td>${x.partName||'—'}</td><td>${x.quantity||0}</td><td>${x.method||'—'}${x.method==='Vehicle'&&x.vehicleNumber?' · '+x.vehicleNumber:''}</td></tr>`).join('')||`<tr class="empty-row"><td colspan="4">No records.</td></tr>`;
+  return `<div class="topbar"><div><h2>Dashboard</h2><div class="sub">Date-wise floor overview</div></div><input class="field dashboard-date" type="date" id="admin-dash-date" value="${date}" aria-label="Dashboard date"></div>
+  <div class="grid grid-4" style="margin-bottom:20px;"><div class="stat" style="--stat-color:var(--green)"><div class="lbl">Present</div><div class="num">${present.length}</div></div><div class="stat" style="--stat-color:var(--red)"><div class="lbl">Absent</div><div class="num">${absent.length}</div></div><div class="stat" style="--stat-color:var(--orange)"><div class="lbl">Assigned pieces</div><div class="num">${assigned}</div></div><div class="stat" style="--stat-color:var(--steel)"><div class="lbl">Progress</div><div class="num">${progress}%</div></div></div>
+  <div class="grid grid-2"><div class="panel"><div class="panel-head"><h3>Employee Attendance</h3><span class="date-pill">${fmtDate(date)}</span></div><div class="table-wrap"><table><thead><tr><th>Employee</th><th>Status</th></tr></thead><tbody>${people}</tbody></table></div>${isSunday(date)?`<div class="overview-note">Sunday Leave: ${sunLeave.length} · Sunday OT: ${sunOt.length}</div>`:''}</div>
+  <div class="panel"><div class="panel-head"><h3>Work Status</h3></div><div class="grid grid-3"><div class="stat"><div class="lbl">Assigned</div><div class="num">${assigned}</div></div><div class="stat"><div class="lbl">Completed</div><div class="num">${completed}</div></div><div class="stat"><div class="lbl">Remaining</div><div class="num">${remaining}</div></div></div><div class="table-wrap" style="margin-top:14px"><table><thead><tr><th>ID</th><th>Work</th><th>Worker</th><th>Progress</th><th>Pieces</th></tr></thead><tbody>${woRows}</tbody></table></div></div></div>
+  <div class="panel"><div class="panel-head"><h3>Power Cut Timings</h3></div><div class="table-wrap"><table><thead><tr><th>Start</th><th>Restored</th><th>Duration</th><th>Remarks</th></tr></thead><tbody>${cutRows}</tbody></table></div></div>
+  <div class="grid grid-2"><div class="panel"><div class="panel-head"><h3>Outward Details</h3></div><div class="table-wrap"><table><thead><tr><th>Invoice/DC</th><th>Part</th><th>Qty</th><th>Method</th></tr></thead><tbody>${invRows(outward)}</tbody></table></div></div><div class="panel"><div class="panel-head"><h3>Inward Details</h3></div><div class="table-wrap"><table><thead><tr><th>Invoice/DC</th><th>Part</th><th>Qty</th><th>Method</th></tr></thead><tbody>${invRows(inward)}</tbody></table></div></div></div>`;
+}
+/* ---- Employees ---- */
+function adminEmployees(){
+  const rows = state.employees.map(e=>`
+    <tr>
+      <td><b>${e.name}</b></td>
+      <td>${e.code}</td>
+      <td>${e.role||'—'}</td>
+      <td>${e.phone||'—'}</td>
+      <td><button class="icon-btn" data-del-emp="${e.id}" title="Remove">✕</button></td>
+    </tr>`).join('') || `<tr class="empty-row"><td colspan="5">No employees yet. Add your first one.</td></tr>`;
+  return `
+    <div class="topbar">
+      <div><h2>Employees</h2><div class="sub">${state.employees.length} on record</div></div>
+      <button class="btn btn-primary" data-open-modal="addEmployee">+ Add employee</button>
+    </div>
+    <div class="panel">
+      <div class="table-wrap"><table><thead><tr><th>Name</th><th>Code</th><th>Role</th><th>Phone</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    </div>`;
+}
+
+/* ---- Attendance ---- */
+function adminAttendance(){
+  const date = state.adminAttDate || todayStr();
+  const rows = state.employees.map(e=>{
+    const rec = state.attendance.find(a=>a.employeeId===e.id && a.date===date);
+    const status = attendanceStatus(e.id, date);
+    return `<tr>
+      <td><b>${e.name}</b></td>
+      <td><input class="mini-time" type="time" data-att-in="${e.id}" value="${rec?.inTime || ''}"></td>
+      <td data-label="Out"><input class="mini-time" type="time" data-att-out="${e.id}" value="${rec?.outTime || ''}"></td>
+      <td><span class="badge ${statusBadgeClass(status)}">${status}</span></td>
+      <td><button class="btn btn-ghost btn-sm" data-att-save="${e.id}">Save</button></td>
+    </tr>`;
+  }).join('');
+
+  const history = [...state.attendance].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,12).map(a=>{
+    const status = attendanceStatus(a.employeeId, a.date);
+    return `<tr><td>${fmtDate(a.date)}</td><td>${empName(a.employeeId)}</td><td>${a.inTime||'—'}</td><td>${a.outTime||'—'}</td><td><span class="badge ${statusBadgeClass(status)}">${status}</span></td></tr>`;
+  }).join('') || `<tr class="empty-row"><td colspan="5">No attendance history yet.</td></tr>`;
+
+  return `
+    <div class="topbar"><div><h2>Attendance</h2><div class="sub">Enter or correct in-time / out-time for any date</div></div></div>
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Attendance for</h3>
+        <input class="field" type="date" id="admin-att-date" value="${date}" style="width:auto;margin-bottom:0;">
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Employee</th><th>In time</th><th>Out time</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Recent history</h3></div>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Employee</th><th>In</th><th>Out</th><th>Status</th></tr></thead><tbody>${history}</tbody></table></div>
+    </div>`;
+}
+
+/* ---- Permissions ---- */
+function adminPermissions(){
+  const sorted = [...state.permissions].sort((a,b)=> (a.status==='pending'?0:1) - (b.status==='pending'?0:1) || b.date.localeCompare(a.date));
+  const rows = sorted.map(p=>`
+    <tr>
+      <td>${fmtDate(p.date)}</td><td>${empName(p.employeeId)}</td><td>${p.outTime}</td><td>${p.inTime||'—'}</td><td>${p.reason||'—'}</td>
+      <td><span class="badge ${requestStatusClass(p.status)}">${requestStatusLabel(p.status,'permission')}</span></td>
+      <td>${p.status==='pending' ? `<button class="btn btn-ghost btn-sm" data-perm-approve="${p.id}">Accept</button> <button class="btn btn-ghost btn-sm" data-perm-reject="${p.id}">Decline</button>` : ''}</td>
+    </tr>
+  `).join('') || `<tr class="empty-row"><td colspan="7">No permission records yet.</td></tr>`;
+  const empOptions = state.employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+  return `
+    <div class="topbar"><div><h2>Permissions</h2><div class="sub">Short leave / permission out-in tracking &amp; approvals</div></div></div>
+    <div class="panel">
+      <div class="panel-head"><h3>Record permission directly</h3></div>
+      <form id="perm-form">
+        <div class="form-row">
+          <div><label class="field-label">Employee</label><select class="field" name="employeeId" required><option value="">Select…</option>${empOptions}</select></div>
+          <div><label class="field-label">Date</label><input class="field" type="date" name="date" value="${todayStr()}" required></div>
+          <div><label class="field-label">Permission out</label><input class="field" type="time" name="outTime" required></div>
+          <div><label class="field-label">Permission in</label><input class="field" type="time" name="inTime"></div>
+        </div>
+        <div><label class="field-label">Reason (optional)</label><input class="field" type="text" name="reason" placeholder="e.g. Bank work"></div>
+        <button class="btn btn-primary" type="submit">Save record (auto-approved)</button>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>All requests</h3></div>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Employee</th><th>Out</th><th>In</th><th>Reason</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    </div>`;
+}
+
+/* ---- Leave ---- */
+function adminLeave(){
+  const sorted = [...state.leaves].sort((a,b)=> (a.status==='pending'?0:1) - (b.status==='pending'?0:1) || b.startDate.localeCompare(a.startDate));
+  const rows = sorted.map(l=>`
+    <tr>
+      <td>${empName(l.employeeId)}</td><td>${fmtDate(l.startDate)} – ${fmtDate(l.endDate)}</td><td>${l.reason||'—'}</td>
+      <td><span class="badge ${requestStatusClass(l.status)}">${requestStatusLabel(l.status,'leave')}</span></td>
+      <td>${l.status==='pending' ? `<button class="btn btn-ghost btn-sm" data-leave-approve="${l.id}">Accept</button> <button class="btn btn-ghost btn-sm" data-leave-reject="${l.id}">Decline</button>` : `<button class="icon-btn" data-del-leave="${l.id}">✕</button>`}</td>
+    </tr>
+  `).join('') || `<tr class="empty-row"><td colspan="5">No leave records yet.</td></tr>`;
+  const empOptions = state.employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+  return `
+    <div class="topbar"><div><h2>Leave</h2><div class="sub">Employee leave records &amp; approvals</div></div></div>
+    <div class="panel">
+      <div class="panel-head"><h3>Add leave record directly</h3></div>
+      <form id="leave-form">
+        <div class="form-row">
+          <div><label class="field-label">Employee</label><select class="field" name="employeeId" required><option value="">Select…</option>${empOptions}</select></div>
+          <div><label class="field-label">From</label><input class="field" type="date" name="startDate" required></div>
+          <div><label class="field-label">To</label><input class="field" type="date" name="endDate" required></div>
+        </div>
+        <div><label class="field-label">Reason (optional)</label><input class="field" type="text" name="reason"></div>
+        <button class="btn btn-primary" type="submit">Save leave (auto-approved)</button>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>All leave</h3></div>
+      <div class="table-wrap"><table><thead><tr><th>Employee</th><th>Dates</th><th>Reason</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    </div>`;
+}
+
+/* ---- Sunday OT ---- */
+function adminSundayOT(){
+  const rows = [...state.sundayOT].sort((a,b)=>b.date.localeCompare(a.date)).map(o=>`
+    <tr>
+      <td data-label="Date">${fmtDate(o.date)}</td>
+      <td data-label="Employee">${empName(o.employeeId)}</td>
+      <td data-label="In">${o.inTime||'—'}</td>
+      <td data-label="Out">${o.outTime||'—'}</td>
+      <td data-label="Hours">${Number(o.hours||0)} hrs</td>
+      <td><button class="icon-btn" data-del-ot="${o.id}">✕</button></td>
+    </tr>
+  `).join('') || `<tr class="empty-row"><td colspan="6">No Sunday OT recorded yet.</td></tr>`;
+  const totalHrs = state.sundayOT.reduce((s,o)=>s+Number(o.hours||0),0);
+  const empOptions = state.employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+  return `
+    <div class="topbar"><div><h2>Sunday OT</h2><div class="sub">${totalHrs} total overtime hours logged</div></div></div>
+    <div class="panel">
+      <div class="panel-head"><h3>Assign Sunday overtime</h3></div>
+      <div class="login-sub" style="margin-bottom:14px;">Sunday OT status is created only when the admin assigns it here. Hours are calculated automatically from In Time and Out Time.</div>
+      <form id="ot-form">
+        <div class="form-row">
+          <div><label class="field-label">Employee</label><select class="field" name="employeeId" required><option value="">Select…</option>${empOptions}</select></div>
+          <div><label class="field-label">Sunday date</label><input class="field" type="date" name="date" required></div>
+          <div><label class="field-label">In Time</label><input class="field" type="time" name="inTime" required></div>
+          <div><label class="field-label">Out Time</label><input class="field" type="time" name="outTime" required></div>
+        </div>
+        <button class="btn btn-primary" type="submit">Assign & Save Sunday OT</button>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>History</h3></div>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Employee</th><th>In</th><th>Out</th><th>Hours</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    </div>`;
+}
+
+/* ---- Work orders (admin) ---- */
+function adminWork(){
+  if(state.workSubTab==='history') return adminWorkHistory();
+  const active = state.workOrders.map((w,i)=>({w,i}));
+  const cards = active.map(x=>renderWoCard(x.w, x.i, true)).join('') || `
+    <div class="empty-state"><div class="mark"></div>No work orders yet. Assign the first job to a worker.</div>`;
+  return `
+    <div class="topbar">
+      <div><h2>Work Orders</h2><div class="sub">Assign jobs, attach reference images, track pieces</div></div>
+      <button class="btn btn-primary" data-open-modal="assignWork">+ Assign work</button>
+    </div>
+    <div class="tab-strip">
+      <button class="tab-btn active" data-worksub="active">Active work</button>
+      <button class="tab-btn" data-worksub="history">History</button>
+    </div>
+    ${cards}`;
+}
+function adminWorkHistory(){
+  const sorted = [...state.workOrders].map((w,i)=>({w, i})).sort((a,b)=> (b.w.date||'').localeCompare(a.w.date||''));
+  const rows = sorted.map(({w,i})=>{
+    const pct = w.total ? Math.round(w.completed/w.total*100) : 0;
+    const remaining = Math.max(0, w.total - w.completed);
+    const att = state.attendance.find(a=>a.employeeId===w.assignedTo && a.date===w.date);
+    const locked = isLocked(w);
+    return `<tr>
+      <td>${w.image ? `<img class="wo-img" style="width:52px;height:52px;" src="${w.image}" data-lightbox="${w.image}">` : '—'}</td>
+      <td><b>${woNumber(i)}</b><br><span style="color:var(--ink-soft);font-size:0.78rem;">${fmtDate(w.date)}</span></td>
+      <td>${w.title}</td>
+      <td>${empName(w.assignedTo)}</td>
+      <td>${w.total} / ${w.completed} / ${remaining}</td>
+      <td>${att?.inTime||'—'} – ${att?.outTime||'—'}</td>
+      <td>${locked ? `<span class="badge badge-locked">Locked</span>` : `<span class="badge badge-green">Editable</span>`}</td>
+    </tr>`;
+  }).join('') || `<tr class="empty-row"><td colspan="7">No work history yet.</td></tr>`;
+  return `
+    <div class="topbar">
+      <div><h2>Work Orders</h2><div class="sub">Read-only history of previous working days</div></div>
+      <button class="btn btn-primary" data-open-modal="assignWork">+ Assign work</button>
+    </div>
+    <div class="tab-strip">
+      <button class="tab-btn" data-worksub="active">Active work</button>
+      <button class="tab-btn active" data-worksub="history">History</button>
+    </div>
+    <div class="panel">
+      <div class="login-sub" style="margin-bottom:14px;">Work order columns: Assigned / Completed / Remaining. Records older than ${LOCK_DAYS} days are locked from editing.</div>
+      <div class="table-wrap"><table><thead><tr><th>Image</th><th>ID / Date</th><th>Work</th><th>Worker</th><th>Assigned/Done/Remain</th><th>In–Out</th><th>Edit status</th></tr></thead><tbody>${rows}</tbody></table></div>
+    </div>`;
+}
+
+function renderWoCard(w, idx, isAdmin){
+  const pct = w.total ? Math.min(100, Math.round(w.completed/w.total*100)) : 0;
+  const remaining = Math.max(0, w.total - w.completed);
+  const color = pct>=100 ? 'var(--green)' : (pct>=50 ? 'var(--orange)' : 'var(--red)');
+  const imgHtml = w.image ? `<img class="wo-img" src="${w.image}" alt="${w.title}" data-lightbox="${w.image}">` : `<div class="wo-img-empty">No image</div>`;
+  const locked = isLocked(w);
+  return `
+  <div class="wo-card" style="--wo-color:${color}">
+    <div class="wo-top">
+      ${imgHtml}
+      <div>
+        <div class="wo-id">${woNumber(idx)} · ${fmtDate(w.date)} · ${pct>=100?'<span class="badge badge-green">Complete</span>':'<span class="badge badge-steel">In progress</span>'} ${locked?'<span class="badge badge-locked">Locked</span>':''}</div>
+        <div class="wo-title">${w.title}</div>
+        <div class="wo-meta">Assigned to <b>${empName(w.assignedTo)}</b>${isAdmin && !locked ?` · <button class="icon-btn" style="width:auto;height:auto;padding:2px 6px;border:none;color:var(--red)" data-del-work="${w.id}">Delete</button>`:''}</div>
+      </div>
+    </div>
+    ${w.instructions ? `<div class="wo-instr">${w.instructions}</div>` : ''}
+    <div class="wo-progress-wrap">
+      <div class="prog-nums"><span>Total <b>${w.total}</b></span><span>Completed <b>${w.completed}</b></span><span>Remaining <b>${remaining}</b></span></div>
+      <div class="prog-bar"><div class="prog-fill ${pct<50?'low':''}" style="width:${pct}%"></div></div>
+      ${locked ? `<div class="locked-note">This record is ${daysSince(w.date)} days old and is locked from editing.</div>` : `
+      <div class="qty-row">
+        <button class="qty-btn" data-qty-dec="${w.id}">−</button>
+        <input class="qty-input" type="number" min="0" max="${w.total}" value="${w.completed}" data-qty-input="${w.id}">
+        <button class="qty-btn" data-qty-inc="${w.id}">+</button>
+        <button class="btn btn-ghost btn-sm qty-save" data-qty-save="${w.id}">Update</button>
+      </div>`}
+      ${!isAdmin ? `
+      <div class="work-remarks">
+        <label class="field-label">Remarks (Optional)</label>
+        <textarea class="field remarks-input" rows="2" data-remarks-input="${w.id}" placeholder="Add comments, notes, or observations about this work">${w.remarks||''}</textarea>
+        <button class="btn btn-ghost btn-sm" data-remarks-save="${w.id}">Save remarks</button>
+      </div>` : (w.remarks ? `<div class="locked-note"><b>Worker remarks:</b> ${w.remarks}</div>` : '')}
+    </div>
+  </div>`;
+}
+
+/* ---- Modal ---- */
+function renderModal(){
+  if(state.modal.type==='addEmployee'){
+    return `<div class="modal-bg" id="modal-bg"><div class="modal"><div class="modal-inner">
+      <button class="close-x" id="modal-close">✕</button>
+      <h3>Add employee</h3>
+      <div class="login-sub" style="margin-bottom:18px;">New employees appear in the worker login list.</div>
+      <form id="emp-form">
+        <label class="field-label">Full name</label><input class="field" name="name" required placeholder="e.g. Anita Rao">
+        <label class="field-label">Employee code</label><input class="field" name="code" required placeholder="e.g. EMP004">
+        <label class="field-label">Role / department</label><input class="field" name="role" placeholder="e.g. Assembly Worker">
+        <label class="field-label">Phone (optional)</label><input class="field" name="phone" placeholder="">
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" id="modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add employee</button>
+        </div>
+      </form>
+    </div></div></div>`;
+  }
+  if(state.modal.type==='assignWork'){
+    const empOptions = state.employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+    return `<div class="modal-bg" id="modal-bg"><div class="modal"><div class="modal-inner">
+      <button class="close-x" id="modal-close">✕</button>
+      <h3>Assign work</h3>
+      <div class="login-sub" style="margin-bottom:18px;">Upload a reference image so the worker can identify the item.</div>
+      <form id="work-form">
+        <label class="field-label">Work / component name</label><input class="field" name="title" required placeholder="e.g. Component Assembly">
+        <label class="field-label">Assign to worker</label>
+        <select class="field" name="assignedTo" required><option value="">Select worker…</option>${empOptions}</select>
+        <label class="field-label">Total pieces required</label><input class="field" type="number" min="1" name="total" required placeholder="e.g. 1000">
+        <label class="field-label">Instructions (optional)</label><textarea class="field" name="instructions" rows="3" placeholder="Any specific instructions for the worker"></textarea>
+        <label class="field-label">Reference image <span class="required-star">*required</span></label>
+        <div id="img-preview-area">
+          <div class="img-upload required" id="img-upload-trigger">📷 Tap to upload a photo of the product/work item</div>
+        </div>
+        <input type="file" accept="image/*" id="img-file-input" style="display:none;">
+        ${state.modalError ? `<div class="form-error">${state.modalError}</div>` : ''}
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" id="modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Assign work</button>
+        </div>
+      </form>
+    </div></div></div>`;
+  }
+  return '';
+}
+
+/* ---------------- ADMIN EVENTS ---------------- */
+function attachAdminEvents(){
+  const logoutBtn = document.getElementById('logout-btn'); if(logoutBtn) logoutBtn.addEventListener('click', logout);
+  const logoutBtnM = document.getElementById('logout-btn-m'); if(logoutBtnM) logoutBtnM.addEventListener('click', logout);
+
+  document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click', ()=>{ state.adminView = el.dataset.view; state.workSubTab='active'; render(); }));
+  document.querySelectorAll('[data-drawer-nav]').forEach(el=>el.addEventListener('click', ()=>{
+    if(el.dataset.attr==='view'){ state.adminView = el.dataset.drawerNav; state.workSubTab='active'; }
+    else { state.workerTab = el.dataset.drawerNav; }
+    state.drawerOpen=false; render();
+  }));
+  document.querySelectorAll('[data-worksub]').forEach(el=>el.addEventListener('click', ()=>{ state.workSubTab = el.dataset.worksub; render(); }));
+
+  document.querySelectorAll('[data-open-modal]').forEach(el=>el.addEventListener('click', ()=>{
+    state.modal = {type: el.dataset.openModal}; state.imgDraft=null; state.modalError=''; render();
+  }));
+
+  const modalClose = document.getElementById('modal-close'); if(modalClose) modalClose.addEventListener('click', closeModal);
+  const modalCancel = document.getElementById('modal-cancel'); if(modalCancel) modalCancel.addEventListener('click', closeModal);
+  const modalBg = document.getElementById('modal-bg'); if(modalBg) modalBg.addEventListener('click', (e)=>{ if(e.target.id==='modal-bg') closeModal(); });
+
+  const empForm = document.getElementById('emp-form');
+  if(empForm) empForm.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const fd = new FormData(empForm);
+    const newEmp = {id:uid('emp'), name:fd.get('name').trim(), code:fd.get('code').trim(), role:fd.get('role').trim(), phone:fd.get('phone').trim()};
+    state.employees.push(newEmp);
+    await persist('employees','fl_employees');
+    closeModal(); showToast('Employee added');
+  });
+
+  const imgTrigger = document.getElementById('img-upload-trigger');
+  const imgFileInput = document.getElementById('img-file-input');
+  if(imgTrigger){
+    imgTrigger.addEventListener('click', ()=> imgFileInput.click());
+    imgFileInput.addEventListener('change', (e)=>{
+      const file = e.target.files[0]; if(!file) return;
+      readAndResizeImage(file, (dataUrl)=>{
+        state.imgDraft = dataUrl; state.modalError='';
+        document.getElementById('img-preview-area').innerHTML = `
+          <img class="img-preview" src="${dataUrl}">
+          <div class="img-upload" id="img-upload-trigger2" style="margin-bottom:14px;">🔁 Tap to replace photo</div>`;
+        document.getElementById('img-upload-trigger2').addEventListener('click', ()=> imgFileInput.click());
+        const errEl = document.querySelector('.form-error'); if(errEl) errEl.remove();
+      });
+    });
+  }
+  const workForm = document.getElementById('work-form');
+  if(workForm) workForm.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    if(!state.imgDraft){
+      state.modalError = 'A reference image is required before you can assign this work.';
+      render();
+      return;
+    }
+    const fd = new FormData(workForm);
+    const newWork = {
+      id: uid('wo'),
+      title: fd.get('title').trim(),
+      assignedTo: fd.get('assignedTo'),
+      total: Number(fd.get('total')),
+      completed: 0,
+      instructions: fd.get('instructions').trim(),
+      image: state.imgDraft,
+      date: todayStr(),
+      createdAt: Date.now(),
+    };
+    state.workOrders.push(newWork);
+    await persist('workOrders','fl_workorders');
+    closeModal(); showToast('Work assigned to ' + empName(newWork.assignedTo));
+  });
+
+  document.querySelectorAll('[data-del-emp]').forEach(el=>el.addEventListener('click', async ()=>{
+    if(!confirm('Remove this employee? Their historical records will remain.')) return;
+    state.employees = state.employees.filter(e=>e.id!==el.dataset.delEmp);
+    await persist('employees','fl_employees'); render();
+  }));
+
+  document.querySelectorAll('[data-del-work]').forEach(el=>el.addEventListener('click', async ()=>{
+    if(!confirm('Delete this work order?')) return;
+    state.workOrders = state.workOrders.filter(w=>w.id!==el.dataset.delWork);
+    await persist('workOrders','fl_workorders'); render();
+  }));
+
+  document.querySelectorAll('[data-del-leave]').forEach(el=>el.addEventListener('click', async ()=>{
+    state.leaves = state.leaves.filter(l=>l.id!==el.dataset.delLeave);
+    await persist('leaves','fl_leaves'); render();
+  }));
+  document.querySelectorAll('[data-del-ot]').forEach(el=>el.addEventListener('click', async ()=>{
+    state.sundayOT = state.sundayOT.filter(o=>o.id!==el.dataset.delOt);
+    await persist('sundayOT','fl_sundayot'); render();
+  }));
+
+  // leave approve/reject
+  document.querySelectorAll('[data-leave-approve]').forEach(el=>el.addEventListener('click', async ()=>{
+    const l = state.leaves.find(x=>x.id===el.dataset.leaveApprove); l.status='approved';
+    await persist('leaves','fl_leaves'); showToast('Leave approved'); render();
+  }));
+  document.querySelectorAll('[data-leave-reject]').forEach(el=>el.addEventListener('click', async ()=>{
+    const l = state.leaves.find(x=>x.id===el.dataset.leaveReject); l.status='rejected';
+    await persist('leaves','fl_leaves'); showToast('Leave rejected'); render();
+  }));
+  // permission approve/reject
+  document.querySelectorAll('[data-perm-approve]').forEach(el=>el.addEventListener('click', async ()=>{
+    const p = state.permissions.find(x=>x.id===el.dataset.permApprove); p.status='approved';
+    await persist('permissions','fl_permissions'); showToast('Permission approved'); render();
+  }));
+  document.querySelectorAll('[data-perm-reject]').forEach(el=>el.addEventListener('click', async ()=>{
+    const p = state.permissions.find(x=>x.id===el.dataset.permReject); p.status='rejected';
+    await persist('permissions','fl_permissions'); showToast('Permission rejected'); render();
+  }));
+
+  const dashDate=document.getElementById('admin-dash-date');
+  if(dashDate) dashDate.addEventListener('change',()=>{state.adminDashDate=dashDate.value;render();});
+
+  const powerForm=document.getElementById('powercut-form');
+  if(powerForm){
+    const updatePowerDuration=()=>{const f=new FormData(powerForm); const d=calcHours(f.get('startTime'),f.get('endTime')); const el=document.getElementById('powercut-duration'); if(el) el.value=d?d+' hrs':'';};
+    powerForm.querySelectorAll('input[type=time]').forEach(x=>x.addEventListener('input',updatePowerDuration));
+    powerForm.addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(powerForm);const duration=calcHours(f.get('startTime'),f.get('endTime'));if(!duration){showToast('Enter valid power cut times');return;}state.powerCuts.push({id:uid('pc'),date:f.get('date'),startTime:f.get('startTime'),endTime:f.get('endTime'),duration,remarks:(f.get('remarks')||'').trim()});await persist('powerCuts','fl_powercuts');showToast('Power-cut record saved');render();});
+  }
+  document.querySelectorAll('[data-del-powercut]').forEach(el=>el.addEventListener('click',async()=>{state.powerCuts=state.powerCuts.filter(x=>x.id!==el.dataset.delPowercut);await persist('powerCuts','fl_powercuts');render();}));
+
+  const invoiceForm=document.getElementById('invoice-form');
+  if(invoiceForm){const method=document.getElementById('invoice-method'),vehicle=document.getElementById('invoice-vehicle');const sync=()=>{vehicle.disabled=method.value!=='Vehicle';vehicle.required=method.value==='Vehicle';};method.addEventListener('change',sync);sync();invoiceForm.addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(invoiceForm);if(f.get('method')==='Vehicle'&&!f.get('vehicleNumber')){showToast('Enter vehicle number');return;}state.invoices.push({id:uid('inv'),date:f.get('date'),type:f.get('type'),number:f.get('number').trim(),partName:f.get('partName').trim(),quantity:Number(f.get('quantity')||0),method:f.get('method'),vehicleNumber:(f.get('vehicleNumber')||'').trim(),remarks:(f.get('remarks')||'').trim()});await persist('invoices','fl_invoices');showToast('Invoice / DC record saved');render();});}
+  document.querySelectorAll('[data-del-invoice]').forEach(el=>el.addEventListener('click',async()=>{state.invoices=state.invoices.filter(x=>x.id!==el.dataset.delInvoice);await persist('invoices','fl_invoices');render();}));
+
+  // attendance date switch
+  const attDate = document.getElementById('admin-att-date');
+  if(attDate) attDate.addEventListener('change', ()=>{ state.adminAttDate = attDate.value; render(); });
+
+  // attendance manual save
+  document.querySelectorAll('[data-att-save]').forEach(el=>el.addEventListener('click', async ()=>{
+    const empId = el.dataset.attSave;
+    const date = state.adminAttDate || todayStr();
+    const inVal = document.querySelector(`[data-att-in="${empId}"]`).value;
+    const outVal = document.querySelector(`[data-att-out="${empId}"]`).value;
+    let rec = state.attendance.find(a=>a.employeeId===empId && a.date===date);
+    if(!rec){ rec = {id:uid('att'), employeeId:empId, date, inTime:'', outTime:''}; state.attendance.push(rec); }
+    rec.inTime = inVal; rec.outTime = outVal;
+    await persist('attendance','fl_attendance');
+    showToast('Attendance saved'); render();
+  }));
+
+  const permForm = document.getElementById('perm-form');
+  if(permForm) permForm.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const fd = new FormData(permForm);
+    state.permissions.push({id:uid('perm'), employeeId:fd.get('employeeId'), date:fd.get('date'), outTime:fd.get('outTime'), inTime:fd.get('inTime')||'', reason:fd.get('reason').trim(), status:'approved', requestedBy:'admin'});
+    await persist('permissions','fl_permissions'); showToast('Permission recorded'); render();
+  });
+
+  const leaveForm = document.getElementById('leave-form');
+  if(leaveForm) leaveForm.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const fd = new FormData(leaveForm);
+    state.leaves.push({id:uid('lv'), employeeId:fd.get('employeeId'), startDate:fd.get('startDate'), endDate:fd.get('endDate'), reason:fd.get('reason').trim(), status:'approved', requestedBy:'admin'});
+    await persist('leaves','fl_leaves'); showToast('Leave recorded'); render();
+  });
+
+  const otForm = document.getElementById('ot-form');
+  if(otForm) otForm.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const fd = new FormData(otForm);
+    const date = fd.get('date');
+    const inTime = fd.get('inTime');
+    const outTime = fd.get('outTime');
+    if(!isSunday(date)){ showToast('Please select a Sunday date'); return; }
+    const hours = calcHours(inTime, outTime);
+    if(hours <= 0){ showToast('Enter valid In Time and Out Time'); return; }
+    const employeeId = fd.get('employeeId');
+    const existing = state.sundayOT.find(o=>o.employeeId===employeeId && o.date===date);
+    if(existing){
+      existing.inTime = inTime; existing.outTime = outTime; existing.hours = hours;
+    }else{
+      state.sundayOT.push({id:uid('ot'), employeeId, date, inTime, outTime, hours});
+    }
+    await persist('sundayOT','fl_sundayot'); showToast('Sunday OT assigned'); render();
+  });
+
+
+  document.querySelectorAll('[data-del-finance]').forEach(el=>el.addEventListener('click', async ()=>{
+    state.finance = state.finance.filter(x=>x.id!==el.dataset.delFinance);
+    await persist('finance','fl_finance'); render();
+  }));
+
+  const financeForm = document.getElementById('finance-form');
+  if(financeForm) financeForm.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const fd = new FormData(financeForm);
+    state.finance.push({
+      id:uid('fin'),
+      type:fd.get('type'),
+      amount:Number(fd.get('amount')||0),
+      date:fd.get('date'),
+      person:fd.get('person').trim(),
+      note:fd.get('note').trim()
+    });
+    await persist('finance','fl_finance');
+    showToast('Financial record saved'); render();
+  });
+
+  attachQtyEvents();
+}
+
+function closeModal(){ state.modal=null; state.imgDraft=null; state.modalError=''; render(); }
+
+async function punch(empId, direction){
+  const date = todayStr();
+  let rec = state.attendance.find(a=>a.employeeId===empId && a.date===date);
+  if(direction==='in' && rec && rec.inTime){ showToast('Already clocked in today'); return; }
+  if(direction==='out' && (!rec || !rec.inTime)){ showToast('Clock in first'); return; }
+  if(direction==='out' && rec.outTime){ showToast('Already clocked out today'); return; }
+  if(!rec){ rec = {id:uid('att'), employeeId:empId, date, inTime:'', outTime:''}; state.attendance.push(rec); }
+  if(direction==='in') rec.inTime = nowTimeStr();
+  if(direction==='out') rec.outTime = nowTimeStr();
+  await persist('attendance','fl_attendance');
+  showToast(direction==='in' ? 'Marked in' : 'Marked out');
+}
+
+function attachQtyEvents(){
+  document.querySelectorAll('[data-qty-inc]').forEach(el=>el.addEventListener('click', ()=>{
+    const input = document.querySelector(`[data-qty-input="${el.dataset.qtyInc}"]`);
+    const w = state.workOrders.find(x=>x.id===el.dataset.qtyInc);
+    input.value = Math.min(w.total, Number(input.value||0)+1);
+  }));
+  document.querySelectorAll('[data-qty-dec]').forEach(el=>el.addEventListener('click', ()=>{
+    const input = document.querySelector(`[data-qty-input="${el.dataset.qtyDec}"]`);
+    input.value = Math.max(0, Number(input.value||0)-1);
+  }));
+  document.querySelectorAll('[data-qty-save]').forEach(el=>el.addEventListener('click', async ()=>{
+    const input = document.querySelector(`[data-qty-input="${el.dataset.qtySave}"]`);
+    const w = state.workOrders.find(x=>x.id===el.dataset.qtySave);
+    w.completed = Math.max(0, Math.min(w.total, Number(input.value||0)));
+    await persist('workOrders','fl_workorders');
+    showToast('Progress updated'); render();
+  }));
+}
+
+/* ================= WORKER SHELL ================= */
+const WORKER_NAV = [
+  {id:'work', label:'My Work', ico:'▤'},
+  {id:'attendance', label:'Attendance', ico:'⏱'},
+  {id:'leave', label:'Leave', ico:'☐'},
+  {id:'permission', label:'Permission', ico:'↪'},
+];
+function renderWorkerShell(){
+  const worker = state.employees.find(e=>e.id===state.currentWorkerId);
+  if(!worker){ state.role=null; state.currentWorkerId=null; return renderLogin(); }
+  const tabs = WORKER_NAV.map(n=>`<button class="tab-btn ${state.workerTab===n.id?'active':''}" data-wtab="${n.id}">${n.label}</button>`).join('');
+  return `
+  <div class="main worker-main" style="max-width:760px;margin:0 auto;">
+    <div class="mobile-topbar" style="display:flex;">
+      <div class="left-group">
+        <button class="hamburger-btn" id="drawer-toggle">☰</button>
+        <div class="brand"><div class="mark"></div>Floorline</div>
+      </div>
+      <button class="logout-m" id="logout-btn-m">Log out</button>
+    </div>
+    <div class="topbar" style="align-items:center;">
+      <div><h2>Hi, ${worker.name.split(' ')[0]}</h2><div class="sub">${worker.role||''} · ${worker.code}</div></div>
+      <button class="btn btn-ghost btn-sm" id="logout-btn">Log out</button>
+    </div>
+    <div class="tab-strip">${tabs}</div>
+    ${renderWorkerView(worker)}
+  </div>
+  ${renderDrawer(WORKER_NAV, state.workerTab, 'tab')}
+  ${renderLightbox()}
+  ${state.toast ? `<div class="toast">${state.toast}</div>` : ''}
+  `;
+}
+function renderWorkerView(worker){
+  if(state.workerTab==='work') return workerWork(worker);
+  if(state.workerTab==='attendance') return workerAttendance(worker);
+  if(state.workerTab==='leave') return workerLeave(worker);
+  if(state.workerTab==='permission') return workerPermission(worker);
+  return '';
+}
+function workerWork(worker){
+  const myWork = state.workOrders.map((w,i)=>({w,i})).filter(x=>x.w.assignedTo===worker.id);
+  const cards = myWork.map(x=>renderWoCard(x.w, x.i, false)).join('') || `
+    <div class="empty-state"><div class="mark"></div>No work assigned to you yet. Check back soon.</div>`;
+  return cards;
+}
+function workerAttendance(worker){
+  const today=todayStr(); const rec=state.attendance.find(a=>a.employeeId===worker.id&&a.date===today);
+  const history=state.attendance.filter(a=>a.employeeId===worker.id).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10).map(a=>`<tr><td>${fmtDate(a.date)}</td><td>${a.inTime||'—'}</td><td>${a.outTime||'—'}</td><td><span class="badge ${statusBadgeClass(attendanceStatus(worker.id,a.date))}">${attendanceStatus(worker.id,a.date)}</span></td></tr>`).join('')||`<tr class="empty-row"><td colspan="4">No attendance history.</td></tr>`;
+  return `<div class="panel"><div class="panel-head"><h3>Today — ${fmtDate(today)}</h3><span class="badge badge-steel">Set Time is default</span></div><div class="time-method"><label><input type="radio" name="w-time-method" value="manual" checked> Set Time / Manual Time</label><label><input type="radio" name="w-time-method" value="clock"> Clock Time</label></div><div id="w-manual-area"><div class="form-row"><div><label class="field-label">In time</label><input class="field" type="time" id="w-manual-in" value="${rec?.inTime||''}"></div><div><label class="field-label">Out time</label><input class="field" type="time" id="w-manual-out" value="${rec?.outTime||''}"></div></div><button class="btn btn-primary" id="w-manual-save">Save time</button></div><div id="w-clock-area" style="display:none"><div class="punch-btns"><button class="btn btn-primary" id="w-in" ${rec?.inTime?'disabled':''}>Clock in ${rec?.inTime?`(${rec.inTime})`:''}</button><button class="btn btn-ghost" id="w-out" ${(!rec?.inTime||rec?.outTime)?'disabled':''}>Clock out ${rec?.outTime?`(${rec.outTime})`:''}</button></div></div></div><div class="panel"><div class="panel-head"><h3>Attendance history</h3></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>In</th><th>Out</th><th>Status</th></tr></thead><tbody>${history}</tbody></table></div></div>`;
+}
+function workerLeave(worker){
+  const mine = state.leaves.filter(l=>l.employeeId===worker.id).sort((a,b)=>b.startDate.localeCompare(a.startDate));
+  const rows = mine.map(l=>`<tr><td>${fmtDate(l.startDate)} – ${fmtDate(l.endDate)}</td><td>${l.reason||'—'}</td><td><span class="badge ${requestStatusClass(l.status)}">${requestStatusLabel(l.status,'leave')}</span></td></tr>`).join('') || `<tr class="empty-row"><td colspan="3">No leave requested yet.</td></tr>`;
+  return `
+    <div class="panel">
+      <div class="panel-head"><h3>Request leave</h3></div>
+      <form id="leave-form-w">
+        <div class="form-row">
+          <div><label class="field-label">From</label><input class="field" type="date" name="startDate" required></div>
+          <div><label class="field-label">To</label><input class="field" type="date" name="endDate" required></div>
+        </div>
+        <div><label class="field-label">Reason</label><input class="field" type="text" name="reason"></div>
+        <button class="btn btn-primary" type="submit">Submit request</button>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Your leave history</h3></div>
+      <div class="table-wrap"><table><thead><tr><th>Dates</th><th>Reason</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>
+    </div>`;
+}
+function workerPermission(worker){
+  const mine = state.permissions.filter(p=>p.employeeId===worker.id).sort((a,b)=>b.date.localeCompare(a.date));
+  const rows = mine.map(p=>`<tr><td>${fmtDate(p.date)}</td><td>${p.outTime}</td><td>${p.inTime||'—'}</td><td>${p.reason||'—'}</td><td><span class="badge ${requestStatusClass(p.status)}">${requestStatusLabel(p.status,'permission')}</span></td></tr>`).join('') || `<tr class="empty-row"><td colspan="5">No permission requested yet.</td></tr>`;
+  return `
+    <div class="panel">
+      <div class="panel-head"><h3>Request permission</h3></div>
+      <form id="perm-form-w">
+        <div class="form-row">
+          <div><label class="field-label">Date</label><input class="field" type="date" name="date" value="${todayStr()}" required></div>
+          <div><label class="field-label">Permission out</label><input class="field" type="time" name="outTime" required></div>
+          <div><label class="field-label">Permission in</label><input class="field" type="time" name="inTime"></div>
+        </div>
+        <div><label class="field-label">Reason</label><input class="field" type="text" name="reason" placeholder="e.g. Personal work"></div>
+        <button class="btn btn-primary" type="submit">Submit request</button>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Your permission history</h3></div>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Out</th><th>In</th><th>Reason</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>
+    </div>`;
+}
+
+
+function money(n){ return '₹' + Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function financeTotals(){
+  const sum=t=>state.finance.filter(x=>x.type===t).reduce((s,x)=>s+Number(x.amount||0),0);
+  return {workerPaid:sum('worker_paid'),workerAdvance:sum('worker_advance'),expenses:sum('expense'),pendingWorkers:sum('pending_worker'),others:sum('others')};
+}
+function adminFinance(){
+  const t=financeTotals(); const balance=-(t.workerPaid+t.expenses+t.workerAdvance)+t.others;
+  const labels={worker_paid:'Amount Given to Workers',worker_advance:'Worker Advance',expense:'Monthly Expense',pending_worker:'Pending Amount Payable to Workers',others:'Others'};
+  const rows=[...state.finance].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${labels[x.type]||x.type}</td><td>${money(x.amount)}</td><td>${x.person||'—'}</td><td>${x.note||'—'}</td><td><button class="icon-btn" data-del-finance="${x.id}">✕</button></td></tr>`).join('')||`<tr class="empty-row"><td colspan="6">No financial records yet.</td></tr>`;
+  return `<div class="topbar"><div><h2>Financials</h2><div class="sub">Track payments, advances, expenses, pending amounts and other entries</div></div></div>
+  <div class="grid grid-3" style="margin-bottom:20px"><div class="stat"><div class="lbl">Paid to workers</div><div class="num">${money(t.workerPaid)}</div></div><div class="stat"><div class="lbl">Worker advances</div><div class="num">${money(t.workerAdvance)}</div></div><div class="stat"><div class="lbl">Monthly expenses</div><div class="num">${money(t.expenses)}</div></div><div class="stat"><div class="lbl">Pending worker payable</div><div class="num">${money(t.pendingWorkers)}</div></div><div class="stat"><div class="lbl">Others</div><div class="num">${money(t.others)}</div></div><div class="stat"><div class="lbl">Net tracked balance</div><div class="num">${money(balance)}</div></div></div>
+  <div class="panel"><div class="panel-head"><h3>Add financial record</h3></div><form id="finance-form"><div class="form-row"><div><label class="field-label">Category</label><select class="field" name="type" required><option value="worker_paid">Amount Given to Workers</option><option value="worker_advance">Worker Advance</option><option value="expense">Monthly Expense</option><option value="pending_worker">Pending Amount Payable to Workers</option><option value="others">Others</option></select></div><div><label class="field-label">Amount</label><input class="field" type="number" step="0.01" min="0" name="amount" required></div><div><label class="field-label">Date</label><input class="field" type="date" name="date" value="${todayStr()}" required></div><div><label class="field-label">Received / Paid By</label><input class="field" type="text" name="person" placeholder="Person name"></div></div><div><label class="field-label">Notes (optional)</label><input class="field" type="text" name="note" placeholder="Reference, purpose, month, etc."></div><button class="btn btn-primary" type="submit">Save financial record</button></form></div>
+  <div class="panel"><div class="panel-head"><h3>Financial history</h3></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Category</th><th>Amount</th><th>Person</th><th>Notes</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+}
+function adminPowerCuts(){
+  const rows=[...state.powerCuts].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${x.startTime||'—'}</td><td>${x.endTime||'—'}</td><td>${x.duration||calcHours(x.startTime,x.endTime)} hrs</td><td>${x.remarks||'—'}</td><td><button class="icon-btn" data-del-powercut="${x.id}">✕</button></td></tr>`).join('')||`<tr class="empty-row"><td colspan="6">No power-cut records yet.</td></tr>`;
+  return `<div class="topbar"><div><h2>Power Cut Timings</h2><div class="sub">Record power interruption and restoration details</div></div></div><div class="panel"><form id="powercut-form"><div class="form-row"><div><label class="field-label">Date</label><input class="field" type="date" name="date" value="${todayStr()}" required></div><div><label class="field-label">Power Cut Start Time</label><input class="field" type="time" name="startTime" required></div><div><label class="field-label">Power Restoration / End Time</label><input class="field" type="time" name="endTime" required></div><div><label class="field-label">Total Duration</label><input class="field" type="text" id="powercut-duration" readonly placeholder="Auto calculated"></div></div><div><label class="field-label">Remarks</label><input class="field" type="text" name="remarks" placeholder="Optional remarks"></div><button class="btn btn-primary" type="submit">Save Power Cut</button></form></div><div class="panel"><div class="panel-head"><h3>Power-cut history</h3></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Start</th><th>Restored</th><th>Duration</th><th>Remarks</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+}
+function adminInvoices(){
+  const rows=[...state.invoices].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>`<tr><td>${fmtDate(x.date)}</td><td><span class="badge ${x.type==='Outward'?'badge-amber':'badge-green'}">${x.type}</span></td><td>${x.number||'—'}</td><td>${x.partName||'—'}</td><td>${x.quantity||0}</td><td>${x.method||'—'}</td><td>${x.method==='Vehicle'?x.vehicleNumber||'—':'—'}</td><td>${x.remarks||'—'}</td><td><button class="icon-btn" data-del-invoice="${x.id}">✕</button></td></tr>`).join('')||`<tr class="empty-row"><td colspan="9">No Invoice / DC records yet.</td></tr>`;
+  return `<div class="topbar"><div><h2>Invoice / DC Inward &amp; Outward</h2><div class="sub">Record daily inward and outward transactions</div></div></div><div class="panel"><form id="invoice-form"><div class="form-row"><div><label class="field-label">Date</label><input class="field" type="date" name="date" value="${todayStr()}" required></div><div><label class="field-label">Transaction Type</label><select class="field" name="type"><option>Outward</option><option>Inward</option></select></div><div><label class="field-label">Invoice / DC Number</label><input class="field" name="number" required></div><div><label class="field-label">Part Name</label><input class="field" name="partName" required></div><div><label class="field-label">Number of Parts / Quantity</label><input class="field" type="number" min="1" name="quantity" required></div><div><label class="field-label">Dispatch / Receipt Method</label><select class="field" name="method" id="invoice-method"><option>Vehicle</option><option>By Hand</option></select></div><div><label class="field-label">Vehicle Number</label><input class="field" name="vehicleNumber" id="invoice-vehicle" placeholder="Required for Vehicle"></div></div><div><label class="field-label">Remarks</label><input class="field" name="remarks"></div><button class="btn btn-primary" type="submit">Save Invoice / DC Record</button></form></div><div class="panel"><div class="panel-head"><h3>History</h3></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Invoice/DC</th><th>Part</th><th>Qty</th><th>Method</th><th>Vehicle</th><th>Remarks</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+}
+
+/* ---------------- WORKER EVENTS ---------------- */
+function attachWorkerEvents(){
+  const logoutBtn = document.getElementById('logout-btn'); if(logoutBtn) logoutBtn.addEventListener('click', logout);
+  const logoutBtnM = document.getElementById('logout-btn-m'); if(logoutBtnM) logoutBtnM.addEventListener('click', logout);
+  document.querySelectorAll('[data-wtab]').forEach(el=>el.addEventListener('click', ()=>{ state.workerTab = el.dataset.wtab; render(); }));
+
+  document.querySelectorAll('[name="w-time-method"]').forEach(r=>r.addEventListener('change',()=>{const manual=document.querySelector('input[name="w-time-method"]:checked')?.value!=='clock';const ma=document.getElementById('w-manual-area'),ca=document.getElementById('w-clock-area');if(ma)ma.style.display=manual?'block':'none';if(ca)ca.style.display=manual?'none':'block';}));
+  document.querySelectorAll('[data-drawer-nav]').forEach(el=>el.addEventListener('click',()=>{if(el.dataset.attr==='tab'){state.workerTab=el.dataset.drawerNav;state.drawerOpen=false;render();}}));
+  const wIn = document.getElementById('w-in'); if(wIn) wIn.addEventListener('click', async ()=>{ await punch(state.currentWorkerId,'in'); render(); });
+  const wOut = document.getElementById('w-out'); if(wOut) wOut.addEventListener('click', async ()=>{ await punch(state.currentWorkerId,'out'); render(); });
+
+  document.querySelectorAll('[data-remarks-save]').forEach(el=>el.addEventListener('click', async ()=>{
+    const workId = el.dataset.remarksSave;
+    const w = state.workOrders.find(x=>x.id===workId && x.assignedTo===state.currentWorkerId);
+    if(!w) return;
+    const input = document.querySelector(`[data-remarks-input="${workId}"]`);
+    w.remarks = input ? input.value.trim() : '';
+    await persist('workOrders','fl_workorders');
+    showToast('Remarks saved'); render();
+  }));
+
+  const wManualSave = document.getElementById('w-manual-save');
+  if(wManualSave) wManualSave.addEventListener('click', async ()=>{
+    const date = todayStr();
+    const inVal = document.getElementById('w-manual-in').value;
+    const outVal = document.getElementById('w-manual-out').value;
+    let rec = state.attendance.find(a=>a.employeeId===state.currentWorkerId && a.date===date);
+    if(!rec){ rec = {id:uid('att'), employeeId:state.currentWorkerId, date, inTime:'', outTime:''}; state.attendance.push(rec); }
+    rec.inTime = inVal; rec.outTime = outVal;
+    await persist('attendance','fl_attendance');
+    showToast('Attendance saved'); render();
+  });
+
+  const permFormW = document.getElementById('perm-form-w');
+  if(permFormW) permFormW.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const fd = new FormData(permFormW);
+    state.permissions.push({id:uid('perm'), employeeId:state.currentWorkerId, date:fd.get('date'), outTime:fd.get('outTime'), inTime:fd.get('inTime')||'', reason:fd.get('reason').trim(), status:'pending', requestedBy:'worker'});
+    await persist('permissions','fl_permissions'); showToast('Permission request submitted'); render();
+  });
+
+  const leaveFormW = document.getElementById('leave-form-w');
+  if(leaveFormW) leaveFormW.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const fd = new FormData(leaveFormW);
+    state.leaves.push({id:uid('lv'), employeeId:state.currentWorkerId, startDate:fd.get('startDate'), endDate:fd.get('endDate'), reason:fd.get('reason').trim(), status:'pending', requestedBy:'worker'});
+    await persist('leaves','fl_leaves'); showToast('Leave request submitted'); render();
+  });
+
+  attachQtyEvents();
+}
+
+/* ================= INIT ================= */
+loadAll();
+</script>
+</body>
+</html>
