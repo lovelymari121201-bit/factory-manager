@@ -449,7 +449,7 @@ function renderLogin(){
       </div>
       ${loginRole==='admin' ? `
         <label class="field-label">Admin PIN</label>
-        <input type="password" class="field" id="admin-pin" placeholder="Enter PIN (demo: 1234)" maxlength="4">
+        <input type="password" class="field" id="admin-pin" placeholder="Enter PIN" maxlength="4">
       ` : `
         <label class="field-label">Select your name</label>
         <select class="field" id="worker-select">
@@ -468,7 +468,7 @@ function attachLoginEvents(){
   document.getElementById('login-btn').addEventListener('click', ()=>{
     if(loginRole==='admin'){
       const pin = document.getElementById('admin-pin').value;
-      if(pin!=='1234'){ loginError='Incorrect PIN.'; render(); return; }
+      if(pin!=='admin@8056'){ loginError='Incorrect PIN.'; render(); return; }
       state.role='admin'; loginError=''; render();
     }else{
       const wid = document.getElementById('worker-select').value;
