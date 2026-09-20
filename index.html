@@ -233,6 +233,18 @@
   .time-method{display:flex;gap:18px;flex-wrap:wrap;padding:10px 0 14px;font-size:.88rem;font-weight:700;}
   .time-method label{display:flex;align-items:center;gap:7px;}
   .overview-note{margin-top:12px;padding:10px 12px;background:var(--panel-alt);border-radius:var(--radius);font-size:.82rem;color:var(--ink-soft);}
+  @media (max-width:600px){
+    .admin-main .grid.grid-2 > .panel{min-width:0;overflow:hidden;}
+    .admin-main .grid.grid-2 > .panel .table-wrap{width:100%;max-width:100%;overflow-x:auto;}
+    .admin-main .grid.grid-2 > .panel .table-wrap table{min-width:0;width:100%;table-layout:fixed;}
+    .admin-main .grid.grid-2 > .panel .table-wrap th,.admin-main .grid.grid-2 > .panel .table-wrap td{white-space:normal;word-break:break-word;}
+    .admin-main .grid.grid-2 > .panel:nth-child(2) .table-wrap table{min-width:520px;width:max-content;}
+    .admin-main .grid.grid-2 > .panel .stat{min-width:0;}
+    .time-entry{display:flex;gap:6px;align-items:center;}
+    .time-entry .time-manual{flex:1;min-width:0;}
+    .time-picker-btn{white-space:nowrap;padding:8px 10px;}
+  }
+  @media (min-width:601px){.admin-main .grid.grid-2 > .panel:nth-child(2) .table-wrap{overflow-x:auto;}}
   @media (max-width:600px){.topbar{gap:10px;flex-wrap:wrap}.topbar .dashboard-date{width:100%;}.worker-main .topbar{padding-top:4px}.worker-main .tab-strip{margin-left:-4px;margin-right:-4px}.worker-main .panel{width:100%;box-sizing:border-box}.wo-card{max-width:100%;}.wo-top>div:last-child{min-width:0;overflow-wrap:anywhere}.btn{max-width:100%;}.form-row>*{min-width:0;}.field{max-width:100%;box-sizing:border-box}.table-wrap{border-bottom:1px solid var(--line);}.table-wrap table{min-width:620px;}}
 </style>
 <!--
@@ -305,7 +317,7 @@ function attendanceStatus(empId, date){
     const ot = state.sundayOT.find(o=>o.employeeId===empId && o.date===date);
     if(ot) return 'Sunday OT';
     if(rec && rec.inTime) return 'Present';
-    return hasApprovedLeave(empId, date) ? 'Sunday Leave' : 'Absent';
+    return 'Sunday Leave';
   }
   return (rec && rec.inTime) ? 'Present' : (hasApprovedLeave(empId, date) ? 'Leave' : 'Absent');
 }
@@ -345,7 +357,7 @@ async function loadAll(){
     state.permissions = (perm || []).map(p=>({ status:'approved', requestedBy:'admin', ...p }));
     state.leaves      = (lv || []).map(l=>({ status:'approved', requestedBy:'admin', ...l }));
     state.sundayOT    = ot || [];
-    state.finance      = (fin || []).map(x=>x.type==='owner_received'?{...x,type:'others'}:x);
+    state.finance      = (fin || []).map(x=>{ if(x.type==='owner_received') return {...x,type:'others'}; if(x.type==='worker_paid') return {...x,type:'worker_salary',receiver:x.person||'',paidBy:x.person||'',paymentMethod:x.paymentMethod||'Cash',remarks:x.note||''}; if(x.type==='worker_advance') return {...x,status:x.status||'Pending',receiver:x.receiver||x.person||''}; return x; });
     state.powerCuts    = pc || [];
     state.invoices     = inv || [];
   }catch(e){ console.error('load error', e); }
@@ -399,13 +411,30 @@ function readAndResizeImage(file, cb){
   reader.readAsDataURL(file);
 }
 
+function setupManualTimeInputs(){
+  document.querySelectorAll('input[type="time"]').forEach((input)=>{
+    if(input.dataset.manualEnhanced) return;
+    const value=input.value||'';
+    const wrap=document.createElement('div'); wrap.className='time-entry';
+    const manual=input.cloneNode(true);
+    manual.type='text'; manual.className=(input.className||'field')+' time-manual'; manual.inputMode='numeric'; manual.placeholder='HH:MM'; manual.value=value; manual.removeAttribute('list'); manual.dataset.manualEnhanced='1';
+    const clock=document.createElement('button'); clock.type='button'; clock.className='btn btn-ghost btn-sm time-picker-btn'; clock.textContent='Clock'; clock.title='Use visual clock';
+    const picker=document.createElement('input'); picker.type='time'; picker.className='sr-time-picker'; picker.value=value; picker.tabIndex=-1; picker.setAttribute('aria-hidden','true'); picker.style.position='absolute'; picker.style.opacity='0'; picker.style.width='1px'; picker.style.height='1px'; picker.style.pointerEvents='none';
+    manual.addEventListener('input',()=>{ let v=manual.value.replace(/[^0-9:]/g,''); if(/^\d{3,4}$/.test(v) && !v.includes(':')) v=v.slice(0,-2)+':'+v.slice(-2); manual.value=v; input.value=/^([01]\d|2[0-3]):[0-5]\d$/.test(v)?v:''; input.dispatchEvent(new Event('input',{bubbles:true})); });
+    clock.addEventListener('click',()=>{ picker.value=input.value||''; if(picker.showPicker) picker.showPicker(); else picker.click(); });
+    picker.addEventListener('change',()=>{ input.value=picker.value; manual.value=picker.value; input.dispatchEvent(new Event('input',{bubbles:true})); });
+    input.style.display='none'; input.insertAdjacentElement('afterend',wrap); wrap.append(manual,clock,picker);
+    input.dataset.manualEnhanced='1';
+  });
+}
+
 /* ================= RENDER ROOT ================= */
 function render(){
   const app = document.getElementById('app');
   if(!state.loaded){ app.innerHTML = `<div class="loading-screen">LOADING FLOORLINE…</div>`; return; }
   if(!state.role){ app.innerHTML = renderLogin(); attachLoginEvents(); return; }
-  if(state.role==='admin'){ app.innerHTML = renderAdminShell(); attachAdminEvents(); attachGlobalEvents(); return; }
-  if(state.role==='worker'){ app.innerHTML = renderWorkerShell(); attachWorkerEvents(); attachGlobalEvents(); return; }
+  if(state.role==='admin'){ app.innerHTML = renderAdminShell(); attachAdminEvents(); attachGlobalEvents(); setupManualTimeInputs(); return; }
+  if(state.role==='worker'){ app.innerHTML = renderWorkerShell(); attachWorkerEvents(); attachGlobalEvents(); setupManualTimeInputs(); return; }
 }
 
 function attachGlobalEvents(){
@@ -469,15 +498,15 @@ function attachLoginEvents(){
     if(loginRole==='admin'){
       const pin = document.getElementById('admin-pin').value;
       if(pin!=='admin@8056'){ loginError='Incorrect PIN.'; render(); return; }
-      state.role='admin'; loginError=''; render();
+      state.role='admin'; state.adminView='dashboard'; loginError=''; render();
     }else{
       const wid = document.getElementById('worker-select').value;
       if(!wid){ loginError='Please select your name.'; render(); return; }
-      state.role='worker'; state.currentWorkerId=wid; loginError=''; render();
+      state.role='worker'; state.workerTab='work'; state.currentWorkerId=wid; loginError=''; render();
     }
   });
 }
-function logout(){ state.role=null; state.currentWorkerId=null; loginError=''; loginRole='worker'; state.drawerOpen=false; render(); }
+function logout(){ state.role=null; state.currentWorkerId=null; state.adminView='dashboard'; state.workerTab='work'; loginError=''; loginRole='worker'; state.drawerOpen=false; render(); }
 
 /* ================= ADMIN SHELL ================= */
 const ADMIN_NAV = [
@@ -982,7 +1011,18 @@ function attachAdminEvents(){
   document.querySelectorAll('[data-del-powercut]').forEach(el=>el.addEventListener('click',async()=>{state.powerCuts=state.powerCuts.filter(x=>x.id!==el.dataset.delPowercut);await persist('powerCuts','fl_powercuts');render();}));
 
   const invoiceForm=document.getElementById('invoice-form');
-  if(invoiceForm){const method=document.getElementById('invoice-method'),vehicle=document.getElementById('invoice-vehicle');const sync=()=>{vehicle.disabled=method.value!=='Vehicle';vehicle.required=method.value==='Vehicle';};method.addEventListener('change',sync);sync();invoiceForm.addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(invoiceForm);if(f.get('method')==='Vehicle'&&!f.get('vehicleNumber')){showToast('Enter vehicle number');return;}state.invoices.push({id:uid('inv'),date:f.get('date'),type:f.get('type'),number:f.get('number').trim(),partName:f.get('partName').trim(),quantity:Number(f.get('quantity')||0),method:f.get('method'),vehicleNumber:(f.get('vehicleNumber')||'').trim(),remarks:(f.get('remarks')||'').trim()});await persist('invoices','fl_invoices');showToast('Invoice / DC record saved');render();});}
+  if(invoiceForm){
+    const method=document.getElementById('invoice-method'),vehicle=document.getElementById('invoice-vehicle'),vehicleWrap=document.getElementById('invoice-vehicle-wrap');
+    const docType=document.getElementById('invoice-document-type'),numLabel=document.getElementById('invoice-number-label');
+    const sync=()=>{
+      const isVehicle=method.value==='Vehicle';
+      vehicle.disabled=!isVehicle; vehicle.required=isVehicle;
+      vehicleWrap.style.display=isVehicle?'block':'none';
+      numLabel.textContent=docType.value==='DC'?'DC Number':'Invoice Number';
+    };
+    method.addEventListener('change',sync); docType.addEventListener('change',sync); sync();
+    invoiceForm.addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(invoiceForm);if(f.get('method')==='Vehicle'&&!f.get('vehicleNumber')){showToast('Enter vehicle number');return;}state.invoices.push({id:uid('inv'),date:f.get('date'),type:f.get('type'),documentType:f.get('documentType'),number:f.get('number').trim(),partName:f.get('partName').trim(),quantity:Number(f.get('quantity')||0),method:f.get('method'),vehicleNumber:(f.get('vehicleNumber')||'').trim(),remarks:(f.get('remarks')||'').trim()});await persist('invoices','fl_invoices');showToast('Invoice / DC record saved');render();});
+  }
   document.querySelectorAll('[data-del-invoice]').forEach(el=>el.addEventListener('click',async()=>{state.invoices=state.invoices.filter(x=>x.id!==el.dataset.delInvoice);await persist('invoices','fl_invoices');render();}));
 
   // attendance date switch
@@ -1039,26 +1079,14 @@ function attachAdminEvents(){
   });
 
 
-  document.querySelectorAll('[data-del-finance]').forEach(el=>el.addEventListener('click', async ()=>{
-    state.finance = state.finance.filter(x=>x.id!==el.dataset.delFinance);
-    await persist('finance','fl_finance'); render();
-  }));
-
-  const financeForm = document.getElementById('finance-form');
-  if(financeForm) financeForm.addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    const fd = new FormData(financeForm);
-    state.finance.push({
-      id:uid('fin'),
-      type:fd.get('type'),
-      amount:Number(fd.get('amount')||0),
-      date:fd.get('date'),
-      person:fd.get('person').trim(),
-      note:fd.get('note').trim()
-    });
-    await persist('finance','fl_finance');
-    showToast('Financial record saved'); render();
-  });
+  document.querySelectorAll('[data-del-finance]').forEach(el=>el.addEventListener('click', async ()=>{ state.finance=state.finance.filter(x=>x.id!==el.dataset.delFinance); await persist('finance','fl_finance'); render(); }));
+  document.querySelectorAll('[data-advance-status]').forEach(el=>el.addEventListener('change', async ()=>{ const rec=state.finance.find(x=>x.id===el.dataset.advanceStatus); if(rec){rec.status=el.value; await persist('finance','fl_finance'); showToast('Advance status updated');} }));
+  const salaryForm=document.getElementById('salary-form');
+  if(salaryForm) salaryForm.addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(salaryForm);state.finance.push({id:uid('fin'),type:'worker_salary',receiver:f.get('receiver').trim(),paidBy:f.get('paidBy').trim(),amount:Number(f.get('amount')||0),date:f.get('date'),paymentMethod:f.get('paymentMethod'),remarks:(f.get('remarks')||'').trim()});await persist('finance','fl_finance');showToast('Worker salary saved');render();});
+  const advanceForm=document.getElementById('advance-form');
+  if(advanceForm) advanceForm.addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(advanceForm);state.finance.push({id:uid('fin'),type:'worker_advance',receiver:f.get('receiver'),amount:Number(f.get('amount')||0),date:f.get('date'),status:f.get('status')});await persist('finance','fl_finance');showToast('Worker advance saved');render();});
+  const othersForm=document.getElementById('others-form');
+  if(othersForm) othersForm.addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(othersForm);state.finance.push({id:uid('fin'),type:'others',amount:Number(f.get('amount')||0),date:f.get('date'),paidBy:(f.get('paidBy')||'').trim(),remarks:(f.get('remarks')||'').trim()});await persist('finance','fl_finance');showToast('Other expense saved');render();});
 
   attachQtyEvents();
 }
@@ -1193,24 +1221,36 @@ function workerPermission(worker){
 function money(n){ return '₹' + Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function financeTotals(){
   const sum=t=>state.finance.filter(x=>x.type===t).reduce((s,x)=>s+Number(x.amount||0),0);
-  return {workerPaid:sum('worker_paid'),workerAdvance:sum('worker_advance'),expenses:sum('expense'),pendingWorkers:sum('pending_worker'),others:sum('others')};
+  return {salary:sum('worker_salary'),advance:sum('worker_advance'),others:sum('others')};
 }
+function monthKey(date){ return (date||'').slice(0,7); }
+function monthLabel(key){ if(!key) return 'Unknown'; const [y,m]=key.split('-'); return new Date(Number(y),Number(m)-1,1).toLocaleDateString(undefined,{month:'long',year:'numeric'}); }
 function adminFinance(){
-  const t=financeTotals(); const balance=-(t.workerPaid+t.expenses+t.workerAdvance)+t.others;
-  const labels={worker_paid:'Amount Given to Workers',worker_advance:'Worker Advance',expense:'Monthly Expense',pending_worker:'Pending Amount Payable to Workers',others:'Others'};
-  const rows=[...state.finance].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${labels[x.type]||x.type}</td><td>${money(x.amount)}</td><td>${x.person||'—'}</td><td>${x.note||'—'}</td><td><button class="icon-btn" data-del-finance="${x.id}">✕</button></td></tr>`).join('')||`<tr class="empty-row"><td colspan="6">No financial records yet.</td></tr>`;
-  return `<div class="topbar"><div><h2>Financials</h2><div class="sub">Track payments, advances, expenses, pending amounts and other entries</div></div></div>
-  <div class="grid grid-3" style="margin-bottom:20px"><div class="stat"><div class="lbl">Paid to workers</div><div class="num">${money(t.workerPaid)}</div></div><div class="stat"><div class="lbl">Worker advances</div><div class="num">${money(t.workerAdvance)}</div></div><div class="stat"><div class="lbl">Monthly expenses</div><div class="num">${money(t.expenses)}</div></div><div class="stat"><div class="lbl">Pending worker payable</div><div class="num">${money(t.pendingWorkers)}</div></div><div class="stat"><div class="lbl">Others</div><div class="num">${money(t.others)}</div></div><div class="stat"><div class="lbl">Net tracked balance</div><div class="num">${money(balance)}</div></div></div>
-  <div class="panel"><div class="panel-head"><h3>Add financial record</h3></div><form id="finance-form"><div class="form-row"><div><label class="field-label">Category</label><select class="field" name="type" required><option value="worker_paid">Amount Given to Workers</option><option value="worker_advance">Worker Advance</option><option value="expense">Monthly Expense</option><option value="pending_worker">Pending Amount Payable to Workers</option><option value="others">Others</option></select></div><div><label class="field-label">Amount</label><input class="field" type="number" step="0.01" min="0" name="amount" required></div><div><label class="field-label">Date</label><input class="field" type="date" name="date" value="${todayStr()}" required></div><div><label class="field-label">Received / Paid By</label><input class="field" type="text" name="person" placeholder="Person name"></div></div><div><label class="field-label">Notes (optional)</label><input class="field" type="text" name="note" placeholder="Reference, purpose, month, etc."></div><button class="btn btn-primary" type="submit">Save financial record</button></form></div>
-  <div class="panel"><div class="panel-head"><h3>Financial history</h3></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Category</th><th>Amount</th><th>Person</th><th>Notes</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  const nowKey=todayStr().slice(0,7);
+  const prevDate=new Date(todayStr()+'T00:00:00'); prevDate.setMonth(prevDate.getMonth()-1);
+  const prevKey=prevDate.toISOString().slice(0,7);
+  const totalForMonth=(key)=>state.finance.filter(x=>monthKey(x.date)===key && (x.type==='worker_salary'||x.type==='others')).reduce((s,x)=>s+Number(x.amount||0),0);
+  const currentTotal=totalForMonth(nowKey), previousTotal=totalForMonth(prevKey);
+  const monthly={}; state.finance.forEach(x=>{if(x.type==='worker_salary'||x.type==='others'){const k=monthKey(x.date);monthly[k]=(monthly[k]||0)+Number(x.amount||0);}});
+  const monthlyRows=Object.keys(monthly).sort().reverse().map(k=>`<tr><td>${monthLabel(k)}</td><td>${money(monthly[k])}</td></tr>`).join('')||`<tr class="empty-row"><td colspan="2">No monthly records yet.</td></tr>`;
+  const salaryRows=state.finance.filter(x=>x.type==='worker_salary').sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${x.receiver||'—'}</td><td>${x.paidBy||'—'}</td><td>${money(x.amount)}</td><td>${x.paymentMethod||'—'}</td><td>${x.remarks||'—'}</td><td><button class="icon-btn" data-del-finance="${x.id}">✕</button></td></tr>`).join('')||`<tr class="empty-row"><td colspan="7">No worker salary records yet.</td></tr>`;
+  const advanceRows=state.finance.filter(x=>x.type==='worker_advance').sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>`<tr><td>${x.receiver||'—'}</td><td>${money(x.amount)}</td><td>${fmtDate(x.date)}</td><td><select class="field advance-status" data-advance-status="${x.id}"><option ${x.status==='Pending'?'selected':''}>Pending</option><option ${x.status==='Cleared'?'selected':''}>Cleared</option></select></td><td><button class="icon-btn" data-del-finance="${x.id}">✕</button></td></tr>`).join('')||`<tr class="empty-row"><td colspan="5">No worker advances yet.</td></tr>`;
+  const otherRows=state.finance.filter(x=>x.type==='others').sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${money(x.amount)}</td><td>${x.paidBy||'—'}</td><td>${x.remarks||'—'}</td><td><button class="icon-btn" data-del-finance="${x.id}">✕</button></td></tr>`).join('')||`<tr class="empty-row"><td colspan="5">No other records yet.</td></tr>`;
+  return `<div class="topbar"><div><h2>Financials</h2><div class="sub">Worker salary, monthly expenses and worker advances</div></div></div>
+  <div class="grid grid-3" style="margin-bottom:20px"><div class="stat"><div class="lbl">Current month total</div><div class="num">${money(currentTotal)}</div></div><div class="stat"><div class="lbl">Previous month total</div><div class="num">${money(previousTotal)}</div></div><div class="stat"><div class="lbl">Worker salary total</div><div class="num">${money(financeTotals().salary)}</div></div></div>
+  <div class="panel"><div class="panel-head"><h3>Worker Salary / Payment</h3></div><form id="salary-form"><div class="form-row"><div><label class="field-label">Receiver</label><input class="field" name="receiver" required></div><div><label class="field-label">Paid By</label><input class="field" name="paidBy" required></div><div><label class="field-label">Amount</label><input class="field" type="number" step="0.01" min="0" name="amount" required></div><div><label class="field-label">Date</label><input class="field" type="date" name="date" value="${todayStr()}" required></div><div><label class="field-label">Payment Method</label><select class="field" name="paymentMethod"><option>Cash</option><option>Bank Transfer</option><option>UPI</option><option>Other</option></select></div></div><div><label class="field-label">Remarks</label><input class="field" name="remarks"></div><button class="btn btn-primary" type="submit">Save Salary Payment</button></form></div>
+  <div class="panel"><div class="panel-head"><h3>Worker Salary Records</h3></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Receiver</th><th>Paid By</th><th>Amount</th><th>Payment Method</th><th>Remarks</th><th></th></tr></thead><tbody>${salaryRows}</tbody></table></div></div>
+  <div class="panel"><div class="panel-head"><h3>Worker Advance</h3></div><form id="advance-form"><div class="form-row"><div><label class="field-label">Worker Name</label><select class="field" name="receiver" required><option value="">Select worker</option>${state.employees.map(e=>`<option>${e.name}</option>`).join('')}</select></div><div><label class="field-label">Advance Amount</label><input class="field" type="number" step="0.01" min="0" name="amount" required></div><div><label class="field-label">Advance Date</label><input class="field" type="date" name="date" value="${todayStr()}" required></div><div><label class="field-label">Advance Status</label><select class="field" name="status"><option>Pending</option><option>Cleared</option></select></div></div><button class="btn btn-primary" type="submit">Save Worker Advance</button></form><div class="table-wrap" style="margin-top:14px"><table><thead><tr><th>Worker</th><th>Amount</th><th>Date</th><th>Status</th><th></th></tr></thead><tbody>${advanceRows}</tbody></table></div></div>
+  <div class="panel"><div class="panel-head"><h3>Other Expenses / Records</h3></div><form id="others-form"><div class="form-row"><div><label class="field-label">Amount</label><input class="field" type="number" step="0.01" min="0" name="amount" required></div><div><label class="field-label">Date</label><input class="field" type="date" name="date" value="${todayStr()}" required></div><div><label class="field-label">Paid By</label><input class="field" name="paidBy"></div><div><label class="field-label">Remarks</label><input class="field" name="remarks"></div></div><button class="btn btn-primary" type="submit">Save Other Expense</button></form><div class="table-wrap" style="margin-top:14px"><table><thead><tr><th>Date</th><th>Amount</th><th>Paid By</th><th>Remarks</th><th></th></tr></thead><tbody>${otherRows}</tbody></table></div></div>
+  <div class="panel"><div class="panel-head"><h3>Historical Monthly Totals</h3></div><div class="table-wrap"><table><thead><tr><th>Month</th><th>Total Monthly Expenses</th></tr></thead><tbody>${monthlyRows}</tbody></table></div></div>`;
 }
 function adminPowerCuts(){
   const rows=[...state.powerCuts].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${x.startTime||'—'}</td><td>${x.endTime||'—'}</td><td>${x.duration||calcHours(x.startTime,x.endTime)} hrs</td><td>${x.remarks||'—'}</td><td><button class="icon-btn" data-del-powercut="${x.id}">✕</button></td></tr>`).join('')||`<tr class="empty-row"><td colspan="6">No power-cut records yet.</td></tr>`;
   return `<div class="topbar"><div><h2>Power Cut Timings</h2><div class="sub">Record power interruption and restoration details</div></div></div><div class="panel"><form id="powercut-form"><div class="form-row"><div><label class="field-label">Date</label><input class="field" type="date" name="date" value="${todayStr()}" required></div><div><label class="field-label">Power Cut Start Time</label><input class="field" type="time" name="startTime" required></div><div><label class="field-label">Power Restoration / End Time</label><input class="field" type="time" name="endTime" required></div><div><label class="field-label">Total Duration</label><input class="field" type="text" id="powercut-duration" readonly placeholder="Auto calculated"></div></div><div><label class="field-label">Remarks</label><input class="field" type="text" name="remarks" placeholder="Optional remarks"></div><button class="btn btn-primary" type="submit">Save Power Cut</button></form></div><div class="panel"><div class="panel-head"><h3>Power-cut history</h3></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Start</th><th>Restored</th><th>Duration</th><th>Remarks</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
 function adminInvoices(){
-  const rows=[...state.invoices].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>`<tr><td>${fmtDate(x.date)}</td><td><span class="badge ${x.type==='Outward'?'badge-amber':'badge-green'}">${x.type}</span></td><td>${x.number||'—'}</td><td>${x.partName||'—'}</td><td>${x.quantity||0}</td><td>${x.method||'—'}</td><td>${x.method==='Vehicle'?x.vehicleNumber||'—':'—'}</td><td>${x.remarks||'—'}</td><td><button class="icon-btn" data-del-invoice="${x.id}">✕</button></td></tr>`).join('')||`<tr class="empty-row"><td colspan="9">No Invoice / DC records yet.</td></tr>`;
-  return `<div class="topbar"><div><h2>Invoice / DC Inward &amp; Outward</h2><div class="sub">Record daily inward and outward transactions</div></div></div><div class="panel"><form id="invoice-form"><div class="form-row"><div><label class="field-label">Date</label><input class="field" type="date" name="date" value="${todayStr()}" required></div><div><label class="field-label">Transaction Type</label><select class="field" name="type"><option>Outward</option><option>Inward</option></select></div><div><label class="field-label">Invoice / DC Number</label><input class="field" name="number" required></div><div><label class="field-label">Part Name</label><input class="field" name="partName" required></div><div><label class="field-label">Number of Parts / Quantity</label><input class="field" type="number" min="1" name="quantity" required></div><div><label class="field-label">Dispatch / Receipt Method</label><select class="field" name="method" id="invoice-method"><option>Vehicle</option><option>By Hand</option></select></div><div><label class="field-label">Vehicle Number</label><input class="field" name="vehicleNumber" id="invoice-vehicle" placeholder="Required for Vehicle"></div></div><div><label class="field-label">Remarks</label><input class="field" name="remarks"></div><button class="btn btn-primary" type="submit">Save Invoice / DC Record</button></form></div><div class="panel"><div class="panel-head"><h3>History</h3></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Invoice/DC</th><th>Part</th><th>Qty</th><th>Method</th><th>Vehicle</th><th>Remarks</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  const rows=[...state.invoices].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>`<tr><td>${fmtDate(x.date)}</td><td><span class="badge ${x.type==='Outward'?'badge-amber':'badge-green'}">${x.type}</span></td><td>${x.documentType||'Invoice'}: ${x.number||'—'}</td><td>${x.partName||'—'}</td><td>${x.quantity||0}</td><td>${x.method||'—'}</td><td>${x.method==='Vehicle'?x.vehicleNumber||'—':'—'}</td><td>${x.remarks||'—'}</td><td><button class="icon-btn" data-del-invoice="${x.id}">✕</button></td></tr>`).join('')||`<tr class="empty-row"><td colspan="9">No Invoice / DC records yet.</td></tr>`;
+  return `<div class="topbar"><div><h2>Invoice / DC Inward &amp; Outward</h2><div class="sub">Record daily inward and outward transactions</div></div></div><div class="panel"><form id="invoice-form"><div class="form-row"><div><label class="field-label">Date</label><input class="field" type="date" name="date" value="${todayStr()}" required></div><div><label class="field-label">Transaction Type</label><select class="field" name="type"><option>Outward</option><option>Inward</option></select></div><div><label class="field-label">Document Type</label><select class="field" name="documentType" id="invoice-document-type"><option>Invoice</option><option>DC</option></select></div><div><label class="field-label" id="invoice-number-label">Invoice Number</label><input class="field" name="number" id="invoice-number" required></div><div><label class="field-label">Part Name</label><input class="field" name="partName" required></div><div><label class="field-label">Number of Parts / Quantity</label><input class="field" type="number" min="1" name="quantity" required></div><div><label class="field-label">Dispatch / Receipt Method</label><select class="field" name="method" id="invoice-method"><option>Vehicle</option><option>By Hand</option></select></div><div id="invoice-vehicle-wrap"><label class="field-label">Vehicle Number</label><input class="field" name="vehicleNumber" id="invoice-vehicle" placeholder="Required for Vehicle"></div></div><div><label class="field-label">Remarks</label><input class="field" name="remarks"></div><button class="btn btn-primary" type="submit">Save Invoice / DC Record</button></form></div><div class="panel"><div class="panel-head"><h3>History</h3></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Transaction</th><th>Document</th><th>Part</th><th>Qty</th><th>Method</th><th>Vehicle</th><th>Remarks</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
 
 /* ---------------- WORKER EVENTS ---------------- */
