@@ -202,7 +202,7 @@
   .remarks-input{margin-bottom:8px;resize:vertical;min-height:62px;}
   @media (max-width:860px){
     .main{min-width:0;max-width:100%;overflow-x:hidden;}
-    .worker-main{width:100%;padding-left:10px;padding-right:10px;box-sizing:border-box;}
+    .worker-main{width:100%;max-width:none!important;padding-left:10px;padding-right:10px;box-sizing:border-box;}
     .panel{padding:16px 14px;}
     .wo-top{padding:14px 14px 12px 18px;}
     .wo-instr,.wo-progress-wrap{padding-left:18px;padding-right:14px;}
@@ -245,7 +245,7 @@
   .admin-main .grid.grid-2 > .panel:nth-child(2) .table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
   .admin-main .grid.grid-2 > .panel:nth-child(1) .table-wrap table,
   .admin-main .grid.grid-2 > .panel:nth-child(2) .table-wrap table{min-width:max-content;}
-  @media (max-width:600px){.topbar{gap:10px;flex-wrap:wrap}.topbar .dashboard-date{width:100%;}.worker-main .topbar{padding-top:4px}.worker-main .tab-strip{margin-left:-4px;margin-right:-4px}.worker-main .panel{width:100%;box-sizing:border-box}.wo-card{max-width:100%;}.wo-top>div:last-child{min-width:0;overflow-wrap:anywhere}.btn{max-width:100%;}.form-row>*{min-width:0;}.field{max-width:100%;box-sizing:border-box}.table-wrap{border-bottom:1px solid var(--line);}.table-wrap table{min-width:620px;}}
+  @media (max-width:600px){.admin-main .grid.grid-2{min-width:0;width:100%;}.admin-main .grid.grid-2 > .panel{min-width:0;max-width:100%;box-sizing:border-box;}.admin-main .grid.grid-2 > .panel .table-wrap{overflow-x:hidden;}.admin-main .grid.grid-2 > .panel .table-wrap table{min-width:0!important;width:100%!important;table-layout:fixed;} .admin-main .grid.grid-2 > .panel .table-wrap th,.admin-main .grid.grid-2 > .panel .table-wrap td{white-space:normal;overflow-wrap:anywhere;word-break:break-word;} .topbar{gap:10px;flex-wrap:wrap}.topbar .dashboard-date{width:100%;}.worker-main .topbar{padding-top:4px}.worker-main .tab-strip{margin-left:-4px;margin-right:-4px}.worker-main .panel{width:100%;box-sizing:border-box}.wo-card{max-width:100%;}.wo-top>div:last-child{min-width:0;overflow-wrap:anywhere}.btn{max-width:100%;}.form-row>*{min-width:0;}.field{max-width:100%;box-sizing:border-box}.table-wrap{border-bottom:1px solid var(--line);}.table-wrap table{min-width:620px;}}
 </style>
 <!--
   PRODUCTION DEPLOYMENT:
@@ -295,6 +295,7 @@ let state = {
   workSubTab:'active',
   adminDashDate:null,
   financeDate:null,
+  financeMonth:null,
 };
 
 function uid(prefix){ return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -595,15 +596,16 @@ function adminEmployees(){
       <td>${e.code}</td>
       <td>${e.role||'—'}</td>
       <td>${e.phone||'—'}</td>
-      <td><button class="icon-btn" data-del-emp="${e.id}" title="Remove">✕</button></td>
-    </tr>`).join('') || `<tr class="empty-row"><td colspan="5">No employees yet. Add your first one.</td></tr>`;
+      <td>${e.salary!=null?money(e.salary):'—'}</td>
+      <td><button class="icon-btn" data-edit-emp="${e.id}" title="Edit">✎</button> <button class="icon-btn" data-del-emp="${e.id}" title="Remove">✕</button></td>
+    </tr>`).join('') || `<tr class="empty-row"><td colspan="6">No employees yet. Add your first one.</td></tr>`;
   return `
     <div class="topbar">
       <div><h2>Employees</h2><div class="sub">${state.employees.length} on record</div></div>
       <button class="btn btn-primary" data-open-modal="addEmployee">+ Add employee</button>
     </div>
     <div class="panel">
-      <div class="table-wrap"><table><thead><tr><th>Name</th><th>Code</th><th>Role</th><th>Phone</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>Name</th><th>Code</th><th>Role</th><th>Phone</th><th>Salary</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
     </div>`;
 }
 
@@ -828,19 +830,20 @@ function renderWoCard(w, idx, isAdmin){
 
 /* ---- Modal ---- */
 function renderModal(){
-  if(state.modal.type==='addEmployee'){
+  if(state.modal.type==='addEmployee' || state.modal.type==='editEmployee'){
     return `<div class="modal-bg" id="modal-bg"><div class="modal"><div class="modal-inner">
       <button class="close-x" id="modal-close">✕</button>
-      <h3>Add employee</h3>
-      <div class="login-sub" style="margin-bottom:18px;">New employees appear in the worker login list.</div>
+      <h3>${state.modal.type==='editEmployee'?'Edit employee':'Add employee'}</h3>
+      <div class="login-sub" style="margin-bottom:18px;">Employee details and salary are stored for Financials salary status.</div>
       <form id="emp-form">
-        <label class="field-label">Full name</label><input class="field" name="name" required placeholder="e.g. Anita Rao">
-        <label class="field-label">Employee code</label><input class="field" name="code" required placeholder="e.g. EMP004">
-        <label class="field-label">Role / department</label><input class="field" name="role" placeholder="e.g. Assembly Worker">
-        <label class="field-label">Phone (optional)</label><input class="field" name="phone" placeholder="">
+        <label class="field-label">Full name</label><input class="field" name="name" required placeholder="e.g. Anita Rao" value="${state.modal.employee?.name||''}">
+        <label class="field-label">Employee code</label><input class="field" name="code" required placeholder="e.g. EMP004" value="${state.modal.employee?.code||''}">
+        <label class="field-label">Role / department</label><input class="field" name="role" placeholder="e.g. Assembly Worker" value="${state.modal.employee?.role||''}">
+        <label class="field-label">Phone (optional)</label><input class="field" name="phone" placeholder="" value="${state.modal.employee?.phone||''}">
+        <label class="field-label">Monthly Salary</label><input class="field" type="number" min="0" step="0.01" name="salary" required value="${state.modal.employee?.salary??''}">
         <div class="modal-actions">
           <button type="button" class="btn btn-ghost" id="modal-cancel">Cancel</button>
-          <button type="submit" class="btn btn-primary">Add employee</button>
+          <button type="submit" class="btn btn-primary">${state.modal.type==='editEmployee'?'Save changes':'Add employee'}</button>
         </div>
       </form>
     </div></div></div>`;
@@ -887,7 +890,7 @@ function attachAdminEvents(){
   document.querySelectorAll('[data-worksub]').forEach(el=>el.addEventListener('click', ()=>{ state.workSubTab = el.dataset.worksub; render(); }));
 
   document.querySelectorAll('[data-open-modal]').forEach(el=>el.addEventListener('click', ()=>{
-    state.modal = {type: el.dataset.openModal}; state.imgDraft=null; state.modalError=''; render();
+    state.modal = {type: el.dataset.openModal, employee: el.dataset.openModal==='editEmployee' ? state.employees.find(e=>e.id===el.dataset.empId) : null}; state.imgDraft=null; state.modalError=''; render();
   }));
 
   const modalClose = document.getElementById('modal-close'); if(modalClose) modalClose.addEventListener('click', closeModal);
@@ -898,10 +901,21 @@ function attachAdminEvents(){
   if(empForm) empForm.addEventListener('submit', async (e)=>{
     e.preventDefault();
     const fd = new FormData(empForm);
-    const newEmp = {id:uid('emp'), name:fd.get('name').trim(), code:fd.get('code').trim(), role:fd.get('role').trim(), phone:fd.get('phone').trim()};
-    state.employees.push(newEmp);
+    const name=fd.get('name').trim(), code=fd.get('code').trim();
+    const duplicate=state.employees.find(e=>e.id!==(state.modal.employee?.id||'') && (e.code||'').toLowerCase()===code.toLowerCase());
+    if(duplicate){showToast('Employee code already exists');return;}
+    const duplicateName=state.employees.find(e=>e.id!==(state.modal.employee?.id||'') && (e.name||'').toLowerCase()===name.toLowerCase());
+    if(duplicateName){showToast('Employee name already exists');return;}
+    const salary=Number(fd.get('salary')||0);
+    if(salary<0){showToast('Enter a valid salary');return;}
+    if(state.modal.type==='editEmployee'){
+      const emp=state.employees.find(e=>e.id===state.modal.employee.id);
+      if(emp) Object.assign(emp,{name,code,role:fd.get('role').trim(),phone:fd.get('phone').trim(),salary});
+    }else{
+      state.employees.push({id:uid('emp'),name,code,role:fd.get('role').trim(),phone:fd.get('phone').trim(),salary});
+    }
     await persist('employees','fl_employees');
-    closeModal(); showToast('Employee added');
+    const wasEdit=state.modal.type==='editEmployee'; closeModal(); showToast(wasEdit?'Employee updated':'Employee added');
   });
 
   const imgTrigger = document.getElementById('img-upload-trigger');
@@ -944,6 +958,11 @@ function attachAdminEvents(){
     await persist('workOrders','fl_workorders');
     closeModal(); showToast('Work assigned to ' + empName(newWork.assignedTo));
   });
+
+  document.querySelectorAll('[data-edit-emp]').forEach(el=>el.addEventListener('click', ()=>{
+    const emp=state.employees.find(e=>e.id===el.dataset.editEmp);
+    if(emp){state.modal={type:'editEmployee',employee:emp};state.modalError='';render();}
+  }));
 
   document.querySelectorAll('[data-del-emp]').forEach(el=>el.addEventListener('click', async ()=>{
     if(!confirm('Remove this employee? Their historical records will remain.')) return;
@@ -1067,8 +1086,8 @@ function attachAdminEvents(){
 
   document.querySelectorAll('[data-del-finance]').forEach(el=>el.addEventListener('click', async ()=>{ state.finance=state.finance.filter(x=>x.id!==el.dataset.delFinance); await persist('finance','fl_finance'); render(); }));
   document.querySelectorAll('[data-advance-status]').forEach(el=>el.addEventListener('change', async ()=>{ const rec=state.finance.find(x=>x.id===el.dataset.advanceStatus); if(rec){rec.status=el.value; await persist('finance','fl_finance'); showToast('Advance status updated');} }));
-  const financeDate=document.getElementById('finance-date');
-  if(financeDate) financeDate.addEventListener('change',()=>{state.financeDate=financeDate.value;render();});
+  const financeMonth=document.getElementById('finance-month');
+  if(financeMonth) financeMonth.addEventListener('change',()=>{state.financeMonth=financeMonth.value;render();});
   const financeType=document.getElementById('finance-type');
   const syncFinanceType=()=>{
     const type=financeType?.value;
@@ -1094,11 +1113,11 @@ function attachAdminEvents(){
     const f=new FormData(financeForm), type=f.get('type');
     const rec={id:uid('fin'),type,amount:Number(f.get('amount')||0),date:f.get('date'),paymentMethod:f.get('paymentMethod'),remarks:(f.get('remarks')||'').trim()};
     if(type==='others'){rec.receiver=(f.get('receiver')||'').trim();rec.paidBy=(f.get('paidBy')||'').trim();}
-    else {rec.workerName=f.get('workerName'); if(type==='worker_advance') rec.status=f.get('status')||'Pending';}
+    else {rec.workerName=f.get('workerName'); const opt=document.querySelector('#finance-worker option:checked'); rec.workerId=opt?.dataset.workerId||state.employees.find(e=>e.name===rec.workerName)?.id||''; if(type==='worker_advance') rec.status=f.get('status')||'Pending';}
     if(!rec.amount || rec.amount<0){showToast('Enter a valid amount');return;}
     if(type!=='others' && !rec.workerName){showToast('Select worker name');return;}
     if(type==='others' && (!rec.receiver || !rec.paidBy)){showToast('Enter receiver and paid by');return;}
-    state.finance.push(rec); await persist('finance','fl_finance'); state.financeDate=rec.date; showToast('Financial entry saved'); render();
+    state.finance.push(rec); await persist('finance','fl_finance'); state.financeMonth=monthKey(rec.date); showToast('Financial entry saved'); render();
   });
 
   attachQtyEvents();
@@ -1186,7 +1205,7 @@ function workerWork(worker){
 function workerAttendance(worker){
   const today=todayStr(); const rec=state.attendance.find(a=>a.employeeId===worker.id&&a.date===today);
   const history=state.attendance.filter(a=>a.employeeId===worker.id).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10).map(a=>`<tr><td>${fmtDate(a.date)}</td><td>${a.inTime||'—'}</td><td>${a.outTime||'—'}</td><td><span class="badge ${statusBadgeClass(attendanceStatus(worker.id,a.date))}">${attendanceStatus(worker.id,a.date)}</span></td></tr>`).join('')||`<tr class="empty-row"><td colspan="4">No attendance history.</td></tr>`;
-  return `<div class="panel"><div class="panel-head"><h3>Today — ${fmtDate(today)}</h3><span class="badge badge-steel">Time Picker is default</span></div><div class="time-method"><label><input type="radio" name="w-time-method" value="manual" checked> Time Picker</label><label><input type="radio" name="w-time-method" value="clock"> Visual Clock</label></div><div id="w-manual-area"><div class="form-row"><div><label class="field-label">In time</label><input class="field" type="time" id="w-manual-in" value="${rec?.inTime||''}"></div><div><label class="field-label">Out time</label><input class="field" type="time" id="w-manual-out" value="${rec?.outTime||''}"></div></div><button class="btn btn-primary" id="w-manual-save">Save time</button></div><div id="w-clock-area" style="display:none"><div class="punch-btns"><button class="btn btn-primary" id="w-in" ${rec?.inTime?'disabled':''}>Clock in ${rec?.inTime?`(${rec.inTime})`:''}</button><button class="btn btn-ghost" id="w-out" ${(!rec?.inTime||rec?.outTime)?'disabled':''}>Clock out ${rec?.outTime?`(${rec.outTime})`:''}</button></div></div></div><div class="panel"><div class="panel-head"><h3>Attendance history</h3></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>In</th><th>Out</th><th>Status</th></tr></thead><tbody>${history}</tbody></table></div></div>`;
+  return `<div class="panel"><div class="panel-head"><h3>Today — ${fmtDate(today)}</h3></div><div class="time-method"><label><input type="radio" name="w-time-method" value="manual" checked> Set Time</label><label><input type="radio" name="w-time-method" value="clock"> Clock Time</label></div><div id="w-manual-area"><div class="form-row"><div><label class="field-label">In time</label><input class="field" type="time" id="w-manual-in" value="${rec?.inTime||''}"></div><div><label class="field-label">Out time</label><input class="field" type="time" id="w-manual-out" value="${rec?.outTime||''}"></div></div><button class="btn btn-primary" id="w-manual-save">Save time</button></div><div id="w-clock-area" style="display:none"><div class="punch-btns"><button class="btn btn-primary" id="w-in" ${rec?.inTime?'disabled':''}>Clock in ${rec?.inTime?`(${rec.inTime})`:''}</button><button class="btn btn-ghost" id="w-out" ${(!rec?.inTime||rec?.outTime)?'disabled':''}>Clock out ${rec?.outTime?`(${rec.outTime})`:''}</button></div></div></div><div class="panel"><div class="panel-head"><h3>Attendance history</h3></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>In</th><th>Out</th><th>Status</th></tr></thead><tbody>${history}</tbody></table></div></div>`;
 }
 function workerLeave(worker){
   const mine = state.leaves.filter(l=>l.employeeId===worker.id).sort((a,b)=>b.startDate.localeCompare(a.startDate));
@@ -1239,23 +1258,30 @@ function financeTotals(){
 function monthKey(date){ return (date||'').slice(0,7); }
 function monthLabel(key){ if(!key) return 'Unknown'; const [y,m]=key.split('-'); return new Date(Number(y),Number(m)-1,1).toLocaleDateString(undefined,{month:'long',year:'numeric'}); }
 function adminFinance(){
-  const selectedDate = state.financeDate || todayStr();
-  const dateRecords = state.finance.filter(x=>(x.date||'')===selectedDate);
-  const total = dateRecords.reduce((sum,x)=>sum+Number(x.amount||0),0);
-  const salaryTotal = dateRecords.filter(x=>x.type==='worker_salary').reduce((sum,x)=>sum+Number(x.amount||0),0);
-  const advanceTotal = dateRecords.filter(x=>x.type==='worker_advance').reduce((sum,x)=>sum+Number(x.amount||0),0);
-  const otherTotal = dateRecords.filter(x=>x.type==='others').reduce((sum,x)=>sum+Number(x.amount||0),0);
-  const rows = dateRecords.map(x=>{
+  const selectedMonth = state.financeMonth || monthKey(todayStr());
+  const monthRecords = state.finance.filter(x=>monthKey(x.date)===selectedMonth);
+  const total = monthRecords.reduce((sum,x)=>sum+Number(x.amount||0),0);
+  const salaryTotal = monthRecords.filter(x=>x.type==='worker_salary').reduce((sum,x)=>sum+Number(x.amount||0),0);
+  const advanceTotal = monthRecords.filter(x=>x.type==='worker_advance').reduce((sum,x)=>sum+Number(x.amount||0),0);
+  const otherTotal = monthRecords.filter(x=>x.type==='others').reduce((sum,x)=>sum+Number(x.amount||0),0);
+  const salaryRows = state.employees.map(e=>{
+    const paid=monthRecords.filter(x=>x.type==='worker_salary' && (x.workerId===e.id || x.workerName===e.name)).reduce((s,x)=>s+Number(x.amount||0),0);
+    const salary=Number(e.salary||0); const balance=Math.max(0,salary-paid);
+    const status=salary>0 && balance<=0 ? 'Cleared' : 'Pending';
+    return `<tr><td>${e.name}</td><td>${money(salary)}</td><td>${money(paid)}</td><td>${money(balance)}</td><td><span class="badge ${status==='Cleared'?'badge-green':'badge-amber'}">${status}</span></td></tr>`;
+  }).join('') || `<tr class="empty-row"><td colspan="5">No employees.</td></tr>`;
+  const rows = monthRecords.map(x=>{
     const typeLabel = x.type==='worker_salary' ? 'Worker Salary' : x.type==='worker_advance' ? 'Worker Advance' : 'Other Expenses';
     const person = x.type==='others' ? (x.receiver||'—') : (x.workerName||x.receiver||'—');
     const paidBy = x.type==='others' ? (x.paidBy||'—') : '—';
     const status = x.type==='worker_advance' ? (x.status||'Pending') : '—';
-    return `<tr><td>${typeLabel}</td><td>${person}</td><td>${paidBy}</td><td>${money(x.amount)}</td><td>${x.paymentMethod||'—'}</td><td>${status}</td><td>${x.remarks||'—'}</td><td><button class="icon-btn" data-del-finance="${x.id}">✕</button></td></tr>`;
-  }).join('') || `<tr class="empty-row"><td colspan="8">No financial records for ${fmtDate(selectedDate)}.</td></tr>`;
-  return `<div class="topbar"><div><h2>Financials</h2><div class="sub">Date-based financial records</div></div><input class="field dashboard-date" id="finance-date" type="date" value="${selectedDate}"></div>
-  <div class="grid grid-4" style="margin-bottom:20px"><div class="stat"><div class="lbl">Selected Date Total</div><div class="num">${money(total)}</div></div><div class="stat"><div class="lbl">Worker Salary</div><div class="num">${money(salaryTotal)}</div></div><div class="stat"><div class="lbl">Worker Advance</div><div class="num">${money(advanceTotal)}</div></div><div class="stat"><div class="lbl">Other Expenses</div><div class="num">${money(otherTotal)}</div></div></div>
-  <div class="panel"><div class="panel-head"><h3>Financial Entry</h3></div><form id="finance-form"><div class="form-row"><div><label class="field-label">Type</label><select class="field" id="finance-type" name="type" required><option value="worker_salary">Worker Salary</option><option value="worker_advance">Worker Advance</option><option value="others">Other Expenses</option></select></div><div id="finance-worker-wrap"><label class="field-label">Worker Name</label><select class="field" name="workerName" id="finance-worker"><option value="">Select worker</option>${state.employees.map(e=>`<option value="${e.name}">${e.name}</option>`).join('')}</select></div><div id="finance-receiver-wrap" style="display:none"><label class="field-label">Receiver</label><input class="field" name="receiver" id="finance-receiver"></div><div id="finance-paidby-wrap" style="display:none"><label class="field-label">Paid By</label><input class="field" name="paidBy" id="finance-paidby"></div><div><label class="field-label">Amount</label><input class="field" type="number" step="0.01" min="0" name="amount" required></div><div><label class="field-label">Date</label><input class="field" type="date" name="date" value="${selectedDate}" required></div><div><label class="field-label">Payment Method</label><select class="field" name="paymentMethod"><option>Cash</option><option>Bank Transfer</option><option>UPI</option><option>Other</option></select></div><div id="finance-status-wrap" style="display:none"><label class="field-label">Advance Status</label><select class="field" name="status"><option>Pending</option><option>Cleared</option></select></div></div><div><label class="field-label">Remarks</label><input class="field" name="remarks"></div><button class="btn btn-primary" type="submit">Save Financial Entry</button></form></div>
-  <div class="panel"><div class="panel-head"><h3>Financial Records — ${fmtDate(selectedDate)}</h3></div><div class="table-wrap"><table><thead><tr><th>Type</th><th>Worker / Receiver</th><th>Paid By</th><th>Amount</th><th>Payment Method</th><th>Status</th><th>Remarks</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+    return `<tr><td>${fmtDate(x.date)}</td><td>${typeLabel}</td><td>${person}</td><td>${paidBy}</td><td>${money(x.amount)}</td><td>${x.paymentMethod||'—'}</td><td>${status}</td><td>${x.remarks||'—'}</td><td><button class="icon-btn" data-del-finance="${x.id}">✕</button></td></tr>`;
+  }).join('') || `<tr class="empty-row"><td colspan="9">No financial records for ${monthLabel(selectedMonth)}.</td></tr>`;
+  return `<div class="topbar"><div><h2>Financials</h2><div class="sub">Month-wise financial dashboard</div></div><input class="field dashboard-date" id="finance-month" type="month" value="${selectedMonth}"></div>
+  <div class="grid grid-4" style="margin-bottom:20px"><div class="stat"><div class="lbl">Monthly Total</div><div class="num">${money(total)}</div></div><div class="stat"><div class="lbl">Worker Salary</div><div class="num">${money(salaryTotal)}</div></div><div class="stat"><div class="lbl">Worker Advance</div><div class="num">${money(advanceTotal)}</div></div><div class="stat"><div class="lbl">Other Expenses</div><div class="num">${money(otherTotal)}</div></div></div>
+  <div class="panel"><div class="panel-head"><h3>Worker Salary Status — ${monthLabel(selectedMonth)}</h3></div><div class="table-wrap"><table><thead><tr><th>Worker</th><th>Salary</th><th>Paid Amount</th><th>Balance</th><th>Status</th></tr></thead><tbody>${salaryRows}</tbody></table></div></div>
+  <div class="panel"><div class="panel-head"><h3>Financial Entry</h3></div><form id="finance-form"><div class="form-row"><div><label class="field-label">Type</label><select class="field" id="finance-type" name="type" required><option value="worker_salary">Worker Salary</option><option value="worker_advance">Worker Advance</option><option value="others">Other Expenses</option></select></div><div id="finance-worker-wrap"><label class="field-label">Worker Name</label><select class="field" name="workerName" id="finance-worker"><option value="">Select worker</option>${state.employees.map(e=>`<option value="${e.name}" data-worker-id="${e.id}">${e.name}</option>`).join('')}</select></div><div id="finance-receiver-wrap" style="display:none"><label class="field-label">Receiver</label><input class="field" name="receiver" id="finance-receiver"></div><div id="finance-paidby-wrap" style="display:none"><label class="field-label">Paid By</label><input class="field" name="paidBy" id="finance-paidby"></div><div><label class="field-label">Amount</label><input class="field" type="number" step="0.01" min="0" name="amount" required></div><div><label class="field-label">Date</label><input class="field" type="date" name="date" value="${selectedMonth}-01" required></div><div><label class="field-label">Payment Method</label><select class="field" name="paymentMethod"><option>Cash</option><option>Bank Transfer</option><option>UPI</option><option>Other</option></select></div><div id="finance-status-wrap" style="display:none"><label class="field-label">Advance Status</label><select class="field" name="status"><option>Pending</option><option>Cleared</option></select></div></div><div><label class="field-label">Remarks</label><input class="field" name="remarks"></div><button class="btn btn-primary" type="submit">Save Financial Entry</button></form></div>
+  <div class="panel"><div class="panel-head"><h3>Financial Records — ${monthLabel(selectedMonth)}</h3></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Worker / Receiver</th><th>Paid By</th><th>Amount</th><th>Payment Method</th><th>Status</th><th>Remarks</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
 function adminPowerCuts(){
   const rows=[...state.powerCuts].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${x.startTime||'—'}</td><td>${x.endTime||'—'}</td><td>${x.duration||calcHours(x.startTime,x.endTime)} hrs</td><td>${x.remarks||'—'}</td><td><button class="icon-btn" data-del-powercut="${x.id}">✕</button></td></tr>`).join('')||`<tr class="empty-row"><td colspan="6">No power-cut records yet.</td></tr>`;
@@ -1271,8 +1297,8 @@ function attachWorkerEvents(){
   const logoutBtn = document.getElementById('logout-btn'); if(logoutBtn) logoutBtn.addEventListener('click', logout);
   const logoutBtnM = document.getElementById('logout-btn-m'); if(logoutBtnM) logoutBtnM.addEventListener('click', logout);
   document.querySelectorAll('[data-wtab]').forEach(el=>el.addEventListener('click', ()=>{ state.workerTab = el.dataset.wtab; render(); }));
-
   document.querySelectorAll('[name="w-time-method"]').forEach(r=>r.addEventListener('change',()=>{const manual=document.querySelector('input[name="w-time-method"]:checked')?.value!=='clock';const ma=document.getElementById('w-manual-area'),ca=document.getElementById('w-clock-area');if(ma)ma.style.display=manual?'block':'none';if(ca)ca.style.display=manual?'none':'block';}));
+
   document.querySelectorAll('[data-drawer-nav]').forEach(el=>el.addEventListener('click',()=>{if(el.dataset.attr==='tab'){state.workerTab=el.dataset.drawerNav;state.drawerOpen=false;render();}}));
   const wIn = document.getElementById('w-in'); if(wIn) wIn.addEventListener('click', async ()=>{ await punch(state.currentWorkerId,'in'); render(); });
   const wOut = document.getElementById('w-out'); if(wOut) wOut.addEventListener('click', async ()=>{ await punch(state.currentWorkerId,'out'); render(); });
