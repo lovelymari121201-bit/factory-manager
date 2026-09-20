@@ -558,6 +558,21 @@ function renderDrawer(navList, activeId, dataAttr){
     </div>
   </div>`;
 }
+let adminRefreshTimer = null;
+let adminRefreshBusy = false;
+async function refreshAdminData(){
+  if(adminRefreshBusy || !FLOORLINE_API_BASE_URL || state.role!=='admin') return;
+  adminRefreshBusy = true;
+  try{
+    const keys=['fl_employees','fl_workorders','fl_attendance','fl_permissions','fl_leaves','fl_sundayot','fl_finance','fl_powercuts','fl_invoices'];
+    const vals=await Promise.all(keys.map(safeGet));
+    const next={employees:vals[0]||[],workOrders:(vals[1]||[]).map(w=>({...w,assignedTo:assignedIds(w)})),attendance:vals[2]||[],permissions:(vals[3]||[]).map(x=>({status:'approved',requestedBy:'admin',...x})),leaves:(vals[4]||[]).map(x=>({status:'approved',requestedBy:'admin',...x})),sundayOT:vals[5]||[],finance:(vals[6]||[]).map(x=>{if(x.type==='owner_received')return {...x,type:'others'};if(x.type==='worker_paid')return {...x,type:'worker_salary',receiver:x.person||'',paidBy:x.person||'',paymentMethod:x.paymentMethod||'Cash',remarks:x.note||''};if(x.type==='worker_advance')return {...x,status:x.status||'Pending',receiver:x.receiver||x.person||''};return x;}),powerCuts:vals[7]||[],invoices:vals[8]||[]};
+    let changed=false; Object.keys(next).forEach(k=>{if(JSON.stringify(state[k])!==JSON.stringify(next[k])){state[k]=next[k];changed=true;}});
+    if(changed) render();
+  }catch(e){console.error('Admin live refresh failed',e);} finally{adminRefreshBusy=false;}
+}
+function startAdminRefresh(){if(adminRefreshTimer)clearInterval(adminRefreshTimer);adminRefreshTimer=setInterval(refreshAdminData,4000);}
+
 function renderAdminView(){
   switch(state.adminView){
     case 'dashboard': return adminDashboard();
@@ -590,7 +605,7 @@ function adminDashboard(){
   const outward = state.invoices.filter(x=>x.date===date && x.type==='Outward');
   const inward = state.invoices.filter(x=>x.date===date && x.type==='Inward');
   const recentWork = dayOrders.slice(0,6);
-  const woRows = recentWork.map(w=>{const p=w.total?Math.round(w.completed/w.total*100):0;return `<tr><td data-label="ID"><b>${woNumber(state.workOrders.indexOf(w))}</b></td><td data-label="Work">${w.title}</td><td data-label="Worker">${empNames(w)}</td><td data-label="Progress"><div class="prog-bar"><div class="prog-fill ${p<50?'low':''}" style="width:${p}%"></div></div></td><td data-label="Pieces">${w.completed}/${w.total}</td></tr>`}).join('')||`<tr class="empty-row"><td colspan="5">No work assigned for this date.</td></tr>`;
+  const woRows = recentWork.map(w=>{const p=w.total?Math.round(w.completed/w.total*100):0;return `<tr><td data-label="ID"><b>${woNumber(state.workOrders.indexOf(w))}</b></td><td data-label="Work">${w.title}</td><td data-label="Worker">${empNames(w)}</td><td data-label="Progress"><b>${p}%</b></td><td data-label="Pieces">${w.completed}/${w.total}</td></tr>`}).join('')||`<tr class="empty-row"><td colspan="5">No work assigned for this date.</td></tr>`;
   const people = state.employees.map(e=>`<tr><td>${e.name}</td><td><span class="badge ${statusBadgeClass(attendanceStatus(e.id,date))}">${attendanceStatus(e.id,date)}</span></td></tr>`).join('')||`<tr class="empty-row"><td colspan="2">No employees.</td></tr>`;
   const cutRows=cuts.map(x=>`<tr><td>${x.startTime||'—'}</td><td>${x.endTime||'—'}</td><td>${x.duration||calcHours(x.startTime,x.endTime)} hrs</td><td>${x.remarks||'—'}</td></tr>`).join('')||`<tr class="empty-row"><td colspan="4">No power-cut records.</td></tr>`;
   const invRows=(arr)=>arr.map(x=>`<tr><td>${x.number||'—'}</td><td>${x.partName||'—'}</td><td>${x.quantity||0}</td><td>${x.method||'—'}${x.method==='Vehicle'&&x.vehicleNumber?' · '+x.vehicleNumber:''}</td></tr>`).join('')||`<tr class="empty-row"><td colspan="4">No records.</td></tr>`;
@@ -598,6 +613,7 @@ function adminDashboard(){
   <div class="grid grid-4" style="margin-bottom:20px;"><div class="stat" style="--stat-color:var(--green)"><div class="lbl">Present</div><div class="num">${present.length}</div></div><div class="stat" style="--stat-color:var(--red)"><div class="lbl">Absent</div><div class="num">${absent.length}</div></div><div class="stat" style="--stat-color:var(--orange)"><div class="lbl">Assigned pieces</div><div class="num">${assigned}</div></div><div class="stat" style="--stat-color:var(--steel)"><div class="lbl">Progress</div><div class="num">${progress}%</div></div></div>
   <div class="grid grid-2"><div class="panel"><div class="panel-head"><h3>Employee Attendance</h3><span class="date-pill">${fmtDate(date)}</span></div><div class="table-wrap"><table><thead><tr><th>Employee</th><th>Status</th></tr></thead><tbody>${people}</tbody></table></div>${isSunday(date)?`<div class="overview-note">Sunday Leave: ${sunLeave.length} · Sunday OT: ${sunOt.length}</div>`:''}</div>
   <div class="panel"><div class="panel-head"><h3>Work Status</h3></div><div class="grid grid-3"><div class="stat"><div class="lbl">Assigned</div><div class="num">${assigned}</div></div><div class="stat"><div class="lbl">Completed</div><div class="num">${completed}</div></div><div class="stat"><div class="lbl">Remaining</div><div class="num">${remaining}</div></div></div><div class="table-wrap" style="margin-top:14px"><table><thead><tr><th>ID</th><th>Work</th><th>Worker</th><th>Progress</th><th>Pieces</th></tr></thead><tbody>${woRows}</tbody></table></div></div></div>
+  <div class="panel"><div class="panel-head"><h3>Daily Work Completion</h3><span class="date-pill">${fmtDate(date)}</span></div><div class="table-wrap"><table><thead><tr><th>Employee</th><th>Parts Completed Today</th></tr></thead><tbody>${state.employees.map(e=>{const count=dayOrders.reduce((sum,w)=>sum+Number((w.dailyCompleted||{})[date+':'+e.id]||0),0);return `<tr><td>${e.name}</td><td><b>${count}</b></td></tr>`}).join('')||`<tr class="empty-row"><td colspan="2">No employees.</td></tr>`}</tbody></table></div></div>
   <div class="panel"><div class="panel-head"><h3>Power Cut Timings</h3></div><div class="table-wrap"><table><thead><tr><th>Start</th><th>Restored</th><th>Duration</th><th>Remarks</th></tr></thead><tbody>${cutRows}</tbody></table></div></div>
   <div class="grid grid-2"><div class="panel"><div class="panel-head"><h3>Outward Details</h3></div><div class="table-wrap"><table><thead><tr><th>Invoice/DC</th><th>Part</th><th>Qty</th><th>Method</th></tr></thead><tbody>${invRows(outward)}</tbody></table></div></div><div class="panel"><div class="panel-head"><h3>Inward Details</h3></div><div class="table-wrap"><table><thead><tr><th>Invoice/DC</th><th>Part</th><th>Qty</th><th>Method</th></tr></thead><tbody>${invRows(inward)}</tbody></table></div></div></div>`;
 }
@@ -829,13 +845,12 @@ function renderWoCard(w, idx, isAdmin){
         <button class="qty-btn" data-qty-dec="${w.id}">−</button>
         <input class="qty-input" type="number" min="0" max="${w.total}" value="${w.completed}" data-qty-input="${w.id}">
         <button class="qty-btn" data-qty-inc="${w.id}">+</button>
-        <button class="btn btn-ghost btn-sm qty-save" data-qty-save="${w.id}">Update</button>
       </div>`}
       ${!isAdmin ? `
       <div class="work-remarks">
         <label class="field-label">Remarks (Optional)</label>
         <textarea class="field remarks-input" rows="2" data-remarks-input="${w.id}" placeholder="Add comments, notes, or observations about this work">${w.remarks||''}</textarea>
-        <button class="btn btn-ghost btn-sm" data-remarks-save="${w.id}">Save remarks</button>
+        <div style="display:flex;justify-content:center;margin-top:10px;"><button class="btn btn-primary" data-work-update="${w.id}">Update</button></div>
       </div>` : (w.remarks ? `<div class="locked-note"><b>Worker remarks:</b> ${w.remarks}</div>` : '')}
     </div>
   </div>`;
@@ -1357,14 +1372,23 @@ function attachWorkerEvents(){
   const wIn = document.getElementById('w-in'); if(wIn) wIn.addEventListener('click', async ()=>{ await punch(state.currentWorkerId,'in'); render(); });
   const wOut = document.getElementById('w-out'); if(wOut) wOut.addEventListener('click', async ()=>{ await punch(state.currentWorkerId,'out'); render(); });
 
-  document.querySelectorAll('[data-remarks-save]').forEach(el=>el.addEventListener('click', async ()=>{
-    const workId = el.dataset.remarksSave;
+  document.querySelectorAll('[data-work-update]').forEach(el=>el.addEventListener('click', async ()=>{
+    const workId = el.dataset.workUpdate;
     const w = state.workOrders.find(x=>x.id===workId && workAssignedTo(x,state.currentWorkerId));
-    if(!w) return;
-    const input = document.querySelector(`[data-remarks-input="${workId}"]`);
-    w.remarks = input ? input.value.trim() : '';
+    if(!w || isLocked(w)) return;
+    const qtyInput = document.querySelector(`[data-qty-input="${workId}"]`);
+    const remarksInput = document.querySelector(`[data-remarks-input="${workId}"]`);
+    const oldCompleted = Number(w.completed||0);
+    const newCompleted = Math.max(0, Math.min(Number(w.total||0), Number(qtyInput?.value||0)));
+    const delta = newCompleted - oldCompleted;
+    w.completed = newCompleted;
+    w.remarks = remarksInput ? remarksInput.value.trim() : (w.remarks||'');
+    const date = todayStr();
+    w.dailyCompleted = w.dailyCompleted || {};
+    const key = date + ':' + state.currentWorkerId;
+    w.dailyCompleted[key] = Math.max(0, Number(w.dailyCompleted[key]||0) + delta);
     await persist('workOrders','fl_workorders');
-    showToast('Remarks saved'); render();
+    showToast('Work updated'); render();
   }));
 
   const wManualSave = document.getElementById('w-manual-save');
@@ -1399,7 +1423,7 @@ function attachWorkerEvents(){
 }
 
 /* ================= INIT ================= */
-loadAll();
+loadAll().then(()=>startAdminRefresh());
 </script>
 </body>
 </html>
