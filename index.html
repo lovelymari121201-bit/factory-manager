@@ -202,7 +202,7 @@
   .remarks-input{margin-bottom:8px;resize:vertical;min-height:62px;}
   @media (max-width:860px){
     .main{min-width:0;max-width:100%;overflow-x:hidden;}
-    .worker-main{width:100%;max-width:none!important;padding-left:10px;padding-right:10px;box-sizing:border-box;}
+    .worker-main{width:100%;max-width:1180px!important;margin:0 auto;box-sizing:border-box;}
     .panel{padding:16px 14px;}
     .wo-top{padding:14px 14px 12px 18px;}
     .wo-instr,.wo-progress-wrap{padding-left:18px;padding-right:14px;}
@@ -238,14 +238,24 @@
     .admin-main .grid.grid-2 > .panel .table-wrap{width:100%;max-width:100%;overflow-x:auto;}
     .admin-main .grid.grid-2 > .panel .table-wrap table{min-width:0;width:100%;table-layout:fixed;}
     .admin-main .grid.grid-2 > .panel .table-wrap th,.admin-main .grid.grid-2 > .panel .table-wrap td{white-space:normal;word-break:break-word;}
-    .admin-main .grid.grid-2 > .panel:nth-child(2) .table-wrap table{min-width:520px;width:max-content;}
+    .admin-main .grid.grid-2 > .panel:nth-child(2) .table-wrap{overflow-x:auto;} .admin-main .grid.grid-2 > .panel:nth-child(2) .table-wrap table{min-width:520px;width:max-content;}
     .admin-main .grid.grid-2 > .panel .stat{min-width:0;}
   }
   .admin-main .grid.grid-2 > .panel:nth-child(1) .table-wrap,
   .admin-main .grid.grid-2 > .panel:nth-child(2) .table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
   .admin-main .grid.grid-2 > .panel:nth-child(1) .table-wrap table,
   .admin-main .grid.grid-2 > .panel:nth-child(2) .table-wrap table{min-width:max-content;}
-  @media (max-width:600px){.admin-main .grid.grid-2{min-width:0;width:100%;}.admin-main .grid.grid-2 > .panel{min-width:0;max-width:100%;box-sizing:border-box;}.admin-main .grid.grid-2 > .panel .table-wrap{overflow-x:hidden;}.admin-main .grid.grid-2 > .panel .table-wrap table{min-width:0!important;width:100%!important;table-layout:fixed;} .admin-main .grid.grid-2 > .panel .table-wrap th,.admin-main .grid.grid-2 > .panel .table-wrap td{white-space:normal;overflow-wrap:anywhere;word-break:break-word;} .topbar{gap:10px;flex-wrap:wrap}.topbar .dashboard-date{width:100%;}.worker-main .topbar{padding-top:4px}.worker-main .tab-strip{margin-left:-4px;margin-right:-4px}.worker-main .panel{width:100%;box-sizing:border-box}.wo-card{max-width:100%;}.wo-top>div:last-child{min-width:0;overflow-wrap:anywhere}.btn{max-width:100%;}.form-row>*{min-width:0;}.field{max-width:100%;box-sizing:border-box}.table-wrap{border-bottom:1px solid var(--line);}.table-wrap table{min-width:620px;}}
+  @media (max-width:600px){.admin-main .grid.grid-2{min-width:0;width:100%;}.admin-main .grid.grid-2 > .panel{min-width:0;max-width:100%;box-sizing:border-box;overflow:visible;}.admin-main .grid.grid-2 > .panel .table-wrap{overflow-x:hidden;}.admin-main .grid.grid-2 > .panel .table-wrap table{min-width:0!important;width:100%!important;table-layout:fixed;} .admin-main .grid.grid-2 > .panel .table-wrap th,.admin-main .grid.grid-2 > .panel .table-wrap td{white-space:normal;overflow-wrap:anywhere;word-break:break-word;} .topbar{gap:10px;flex-wrap:wrap}.topbar .dashboard-date{width:100%;}.worker-main .topbar{padding-top:4px}.worker-main .tab-strip{margin-left:-4px;margin-right:-4px}.worker-main .panel{width:100%;box-sizing:border-box}.wo-card{max-width:100%;}.wo-top>div:last-child{min-width:0;overflow-wrap:anywhere}.btn{max-width:100%;}.form-row>*{min-width:0;}.field{max-width:100%;box-sizing:border-box}.table-wrap{border-bottom:1px solid var(--line);}.table-wrap table{min-width:620px;}}
+
+  .employee-checklist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;border:1px solid var(--line);padding:10px;border-radius:var(--radius);background:var(--panel-alt);margin-bottom:16px;}
+  .employee-check{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#fff;border:1px solid var(--line);border-radius:var(--radius);font-size:.88rem;}
+  .employee-check input{margin:0;}
+  .advance-status-select{width:auto;min-width:120px;margin:0;padding:7px 28px 7px 8px;}
+  .record-note{font-size:.72rem;color:var(--ink-soft);margin-top:4px;}
+  .worker-main{min-width:0;}
+  .worker-main .wo-card{width:100%;}
+  @media (min-width:861px){.worker-main .panel{width:100%;}.worker-main .form-row{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));}.worker-main .tab-strip{max-width:100%;}.worker-main .table-wrap{max-width:100%;overflow-x:auto;}}
+  @media (max-width:600px){.employee-checklist{grid-template-columns:1fr;}.worker-main{padding-left:10px!important;padding-right:10px!important;}.worker-main .wo-top{min-width:0;}.worker-main .wo-top>div:last-child{min-width:0;}.worker-main .panel{overflow:hidden;}.worker-main .table-wrap{overflow-x:auto;max-width:100%;}}
 </style>
 <!--
   PRODUCTION DEPLOYMENT:
@@ -304,6 +314,9 @@ function nowTimeStr(){ const d=new Date(); return d.toTimeString().slice(0,5); }
 function fmtDate(s){ if(!s) return '—'; const d=new Date(s+'T00:00:00'); return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }
 function isSunday(dateStr){ return new Date(dateStr+'T00:00:00').getDay()===0; }
 function woNumber(idx){ return 'WO-' + String(idx+1).padStart(4,'0'); }
+function assignedIds(w){ if(Array.isArray(w.assignedTo)) return w.assignedTo; if(w.assignedTo) return [w.assignedTo]; return []; }
+function empNames(w){ const ids=assignedIds(w); return ids.length ? ids.map(empName).join(', ') : 'Unassigned'; }
+function workAssignedTo(w, empId){ return assignedIds(w).includes(empId); }
 function empName(id){ const e=state.employees.find(x=>x.id===id); return e?e.name:'Unassigned'; }
 function showToast(msg){ state.toast=msg; render(); setTimeout(()=>{ state.toast=null; render(); }, 2400); }
 function daysSince(dateStr){ const a=new Date(todayStr()+'T00:00:00'); const b=new Date(dateStr+'T00:00:00'); return Math.round((a-b)/86400000); }
@@ -354,7 +367,7 @@ async function loadAll(){
   try{
     const [emp, wo, att, perm, lv, ot, fin, pc, inv] = await Promise.all(STORE_KEYS.map(k=>safeGet(k)));
     state.employees   = emp || [];
-    state.workOrders  = (wo || []).map(w=>({ date: todayStr(), ...w }));
+    state.workOrders  = (wo || []).map(w=>({ date: todayStr(), ...w, assignedTo: assignedIds(w) }));
     state.attendance  = att || [];
     state.permissions = (perm || []).map(p=>({ status:'approved', requestedBy:'admin', ...p }));
     state.leaves      = (lv || []).map(l=>({ status:'approved', requestedBy:'admin', ...l }));
@@ -577,7 +590,7 @@ function adminDashboard(){
   const outward = state.invoices.filter(x=>x.date===date && x.type==='Outward');
   const inward = state.invoices.filter(x=>x.date===date && x.type==='Inward');
   const recentWork = dayOrders.slice(0,6);
-  const woRows = recentWork.map(w=>{const p=w.total?Math.round(w.completed/w.total*100):0;return `<tr><td data-label="ID"><b>${woNumber(state.workOrders.indexOf(w))}</b></td><td data-label="Work">${w.title}</td><td data-label="Worker">${empName(w.assignedTo)}</td><td data-label="Progress"><div class="prog-bar"><div class="prog-fill ${p<50?'low':''}" style="width:${p}%"></div></div></td><td data-label="Pieces">${w.completed}/${w.total}</td></tr>`}).join('')||`<tr class="empty-row"><td colspan="5">No work assigned for this date.</td></tr>`;
+  const woRows = recentWork.map(w=>{const p=w.total?Math.round(w.completed/w.total*100):0;return `<tr><td data-label="ID"><b>${woNumber(state.workOrders.indexOf(w))}</b></td><td data-label="Work">${w.title}</td><td data-label="Worker">${empNames(w)}</td><td data-label="Progress"><div class="prog-bar"><div class="prog-fill ${p<50?'low':''}" style="width:${p}%"></div></div></td><td data-label="Pieces">${w.completed}/${w.total}</td></tr>`}).join('')||`<tr class="empty-row"><td colspan="5">No work assigned for this date.</td></tr>`;
   const people = state.employees.map(e=>`<tr><td>${e.name}</td><td><span class="badge ${statusBadgeClass(attendanceStatus(e.id,date))}">${attendanceStatus(e.id,date)}</span></td></tr>`).join('')||`<tr class="empty-row"><td colspan="2">No employees.</td></tr>`;
   const cutRows=cuts.map(x=>`<tr><td>${x.startTime||'—'}</td><td>${x.endTime||'—'}</td><td>${x.duration||calcHours(x.startTime,x.endTime)} hrs</td><td>${x.remarks||'—'}</td></tr>`).join('')||`<tr class="empty-row"><td colspan="4">No power-cut records.</td></tr>`;
   const invRows=(arr)=>arr.map(x=>`<tr><td>${x.number||'—'}</td><td>${x.partName||'—'}</td><td>${x.quantity||0}</td><td>${x.method||'—'}${x.method==='Vehicle'&&x.vehicleNumber?' · '+x.vehicleNumber:''}</td></tr>`).join('')||`<tr class="empty-row"><td colspan="4">No records.</td></tr>`;
@@ -764,13 +777,13 @@ function adminWorkHistory(){
   const rows = sorted.map(({w,i})=>{
     const pct = w.total ? Math.round(w.completed/w.total*100) : 0;
     const remaining = Math.max(0, w.total - w.completed);
-    const att = state.attendance.find(a=>a.employeeId===w.assignedTo && a.date===w.date);
+    const att = state.attendance.find(a=>assignedIds(w).includes(a.employeeId) && a.date===w.date);
     const locked = isLocked(w);
     return `<tr>
       <td>${w.image ? `<img class="wo-img" style="width:52px;height:52px;" src="${w.image}" data-lightbox="${w.image}">` : '—'}</td>
       <td><b>${woNumber(i)}</b><br><span style="color:var(--ink-soft);font-size:0.78rem;">${fmtDate(w.date)}</span></td>
       <td>${w.title}</td>
-      <td>${empName(w.assignedTo)}</td>
+      <td>${empNames(w)}</td>
       <td>${w.total} / ${w.completed} / ${remaining}</td>
       <td>${att?.inTime||'—'} – ${att?.outTime||'—'}</td>
       <td>${locked ? `<span class="badge badge-locked">Locked</span>` : `<span class="badge badge-green">Editable</span>`}</td>
@@ -804,7 +817,7 @@ function renderWoCard(w, idx, isAdmin){
       <div>
         <div class="wo-id">${woNumber(idx)} · ${fmtDate(w.date)} · ${pct>=100?'<span class="badge badge-green">Complete</span>':'<span class="badge badge-steel">In progress</span>'} ${locked?'<span class="badge badge-locked">Locked</span>':''}</div>
         <div class="wo-title">${w.title}</div>
-        <div class="wo-meta">Assigned to <b>${empName(w.assignedTo)}</b>${isAdmin && !locked ?` · <button class="icon-btn" style="width:auto;height:auto;padding:2px 6px;border:none;color:var(--red)" data-del-work="${w.id}">Delete</button>`:''}</div>
+        <div class="wo-meta">Assigned to <b>${empNames(w)}</b>${isAdmin && !locked ?` · <button class="icon-btn" style="width:auto;height:auto;padding:2px 6px;border:none;color:var(--steel)" data-edit-work="${w.id}">Edit</button> <button class="icon-btn" style="width:auto;height:auto;padding:2px 6px;border:none;color:var(--red)" data-del-work="${w.id}">Delete</button>`:''}</div>
       </div>
     </div>
     ${w.instructions ? `<div class="wo-instr">${w.instructions}</div>` : ''}
@@ -848,27 +861,25 @@ function renderModal(){
       </form>
     </div></div></div>`;
   }
-  if(state.modal.type==='assignWork'){
+  if(state.modal.type==='assignWork' || state.modal.type==='editWork'){
     const empOptions = state.employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
     return `<div class="modal-bg" id="modal-bg"><div class="modal"><div class="modal-inner">
       <button class="close-x" id="modal-close">✕</button>
-      <h3>Assign work</h3>
+      <h3>${state.modal.type==='editWork'?'Edit work order':'Assign work'}</h3>
       <div class="login-sub" style="margin-bottom:18px;">Upload a reference image so the worker can identify the item.</div>
       <form id="work-form">
-        <label class="field-label">Work / component name</label><input class="field" name="title" required placeholder="e.g. Component Assembly">
-        <label class="field-label">Assign to worker</label>
-        <select class="field" name="assignedTo" required><option value="">Select worker…</option>${empOptions}</select>
-        <label class="field-label">Total pieces required</label><input class="field" type="number" min="1" name="total" required placeholder="e.g. 1000">
-        <label class="field-label">Instructions (optional)</label><textarea class="field" name="instructions" rows="3" placeholder="Any specific instructions for the worker"></textarea>
+        <label class="field-label">Work / component name</label><input class="field" name="title" required placeholder="e.g. Component Assembly" value="${state.modal.work?.title||''}">
+        <label class="field-label">Assign to worker(s)</label>
+        <div class="employee-checklist">${state.employees.map(e=>{const checked=assignedIds(state.modal.work||{}).includes(e.id)?' checked':'';return `<label class="employee-check"><input type="checkbox" name="assignedTo" value="${e.id}"${checked}> <span>${e.name}</span></label>`}).join('')}</div>
+        <label class="field-label">Total pieces required</label><input class="field" type="number" min="1" name="total" required placeholder="e.g. 1000" value="${state.modal.work?.total??''}">
+        <label class="field-label">Instructions (optional)</label><textarea class="field" name="instructions" rows="3" placeholder="Any specific instructions for the worker">${state.modal.work?.instructions||''}</textarea>
         <label class="field-label">Reference image <span class="required-star">*required</span></label>
-        <div id="img-preview-area">
-          <div class="img-upload required" id="img-upload-trigger">📷 Tap to upload a photo of the product/work item</div>
-        </div>
+        <div id="img-preview-area">${state.modal.work?.image ? `<img class="img-preview" src="${state.modal.work.image}"><div class="img-upload" id="img-upload-trigger">🔁 Tap to replace photo</div>` : `<div class="img-upload ${state.modal.type==='editWork'?'':'required'}" id="img-upload-trigger">📷 Tap to upload a photo of the product/work item${state.modal.type==='editWork'?' (optional)':''}</div>`}</div>
         <input type="file" accept="image/*" id="img-file-input" style="display:none;">
         ${state.modalError ? `<div class="form-error">${state.modalError}</div>` : ''}
         <div class="modal-actions">
           <button type="button" class="btn btn-ghost" id="modal-cancel">Cancel</button>
-          <button type="submit" class="btn btn-primary">Assign work</button>
+          <button type="submit" class="btn btn-primary">${state.modal.type==='editWork'?'Save changes':'Assign work'}</button>
         </div>
       </form>
     </div></div></div>`;
@@ -878,7 +889,6 @@ function renderModal(){
 
 /* ---------------- ADMIN EVENTS ---------------- */
 function attachAdminEvents(){
-  const logoutBtn = document.getElementById('logout-btn'); if(logoutBtn) logoutBtn.addEventListener('click', logout);
   const logoutBtnM = document.getElementById('logout-btn-m'); if(logoutBtnM) logoutBtnM.addEventListener('click', logout);
 
   document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click', ()=>{ state.adminView = el.dataset.view; state.workSubTab='active'; render(); }));
@@ -890,7 +900,7 @@ function attachAdminEvents(){
   document.querySelectorAll('[data-worksub]').forEach(el=>el.addEventListener('click', ()=>{ state.workSubTab = el.dataset.worksub; render(); }));
 
   document.querySelectorAll('[data-open-modal]').forEach(el=>el.addEventListener('click', ()=>{
-    state.modal = {type: el.dataset.openModal, employee: el.dataset.openModal==='editEmployee' ? state.employees.find(e=>e.id===el.dataset.empId) : null}; state.imgDraft=null; state.modalError=''; render();
+    state.modal = {type: el.dataset.openModal, employee: el.dataset.openModal==='editEmployee' ? state.employees.find(e=>e.id===el.dataset.empId) : null, work: el.dataset.openModal==='editWork' ? state.workOrders.find(w=>w.id===el.dataset.workId) : null}; state.imgDraft=null; state.modalError=''; render();
   }));
 
   const modalClose = document.getElementById('modal-close'); if(modalClose) modalClose.addEventListener('click', closeModal);
@@ -937,16 +947,31 @@ function attachAdminEvents(){
   const workForm = document.getElementById('work-form');
   if(workForm) workForm.addEventListener('submit', async (e)=>{
     e.preventDefault();
-    if(!state.imgDraft){
+    const fd = new FormData(workForm);
+    const assigned = fd.getAll('assignedTo').filter(Boolean);
+    if(!assigned.length){ state.modalError='Select at least one employee.'; render(); return; }
+    if(state.modal.type==='assignWork' && !state.imgDraft){
       state.modalError = 'A reference image is required before you can assign this work.';
       render();
       return;
     }
-    const fd = new FormData(workForm);
+    if(state.modal.type==='editWork'){
+      const w=state.workOrders.find(x=>x.id===state.modal.work.id);
+      if(!w){ closeModal(); return; }
+      w.title=fd.get('title').trim();
+      w.assignedTo=assigned;
+      w.total=Math.max(1,Number(fd.get('total')||1));
+      w.completed=Math.min(w.total,Number(w.completed||0));
+      w.instructions=fd.get('instructions').trim();
+      if(state.imgDraft) w.image=state.imgDraft;
+      await persist('workOrders','fl_workorders');
+      closeModal(); showToast('Work order updated');
+      return;
+    }
     const newWork = {
       id: uid('wo'),
       title: fd.get('title').trim(),
-      assignedTo: fd.get('assignedTo'),
+      assignedTo: assigned,
       total: Number(fd.get('total')),
       completed: 0,
       instructions: fd.get('instructions').trim(),
@@ -956,7 +981,7 @@ function attachAdminEvents(){
     };
     state.workOrders.push(newWork);
     await persist('workOrders','fl_workorders');
-    closeModal(); showToast('Work assigned to ' + empName(newWork.assignedTo));
+    closeModal(); showToast('Work assigned to ' + empNames(newWork));
   });
 
   document.querySelectorAll('[data-edit-emp]').forEach(el=>el.addEventListener('click', ()=>{
@@ -968,6 +993,11 @@ function attachAdminEvents(){
     if(!confirm('Remove this employee? Their historical records will remain.')) return;
     state.employees = state.employees.filter(e=>e.id!==el.dataset.delEmp);
     await persist('employees','fl_employees'); render();
+  }));
+
+  document.querySelectorAll('[data-edit-work]').forEach(el=>el.addEventListener('click', ()=>{
+    const work=state.workOrders.find(w=>w.id===el.dataset.editWork);
+    if(work){ state.modal={type:'editWork',work}; state.imgDraft=work.image||null; state.modalError=''; render(); }
   }));
 
   document.querySelectorAll('[data-del-work]').forEach(el=>el.addEventListener('click', async ()=>{
@@ -1085,7 +1115,25 @@ function attachAdminEvents(){
 
 
   document.querySelectorAll('[data-del-finance]').forEach(el=>el.addEventListener('click', async ()=>{ state.finance=state.finance.filter(x=>x.id!==el.dataset.delFinance); await persist('finance','fl_finance'); render(); }));
-  document.querySelectorAll('[data-advance-status]').forEach(el=>el.addEventListener('change', async ()=>{ const rec=state.finance.find(x=>x.id===el.dataset.advanceStatus); if(rec){rec.status=el.value; await persist('finance','fl_finance'); showToast('Advance status updated');} }));
+  document.querySelectorAll('[data-advance-status]').forEach(el=>el.addEventListener('change', async ()=>{
+    const rec=state.finance.find(x=>x.id===el.dataset.advanceStatus);
+    if(!rec) return;
+    if(el.value==='Cleared'){
+      const d=prompt('Enter advance clearance date (YYYY-MM-DD):', todayStr());
+      if(!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)){
+        el.value=rec.status||'Pending';
+        showToast('Advance clearance date is required');
+        return;
+      }
+      rec.clearanceDate=d;
+    }else{
+      rec.clearanceDate='';
+    }
+    rec.status=el.value;
+    await persist('finance','fl_finance');
+    showToast('Advance status updated');
+    render();
+  }));
   const financeMonth=document.getElementById('finance-month');
   if(financeMonth) financeMonth.addEventListener('change',()=>{state.financeMonth=financeMonth.value;render();});
   const financeType=document.getElementById('finance-type');
@@ -1095,6 +1143,7 @@ function attachAdminEvents(){
     const receiverWrap=document.getElementById('finance-receiver-wrap');
     const paidByWrap=document.getElementById('finance-paidby-wrap');
     const statusWrap=document.getElementById('finance-status-wrap');
+    const salaryPeriodWrap=document.getElementById('finance-salary-period-wrap');
     const worker=document.getElementById('finance-worker');
     const receiver=document.getElementById('finance-receiver');
     const paidBy=document.getElementById('finance-paidby');
@@ -1102,6 +1151,7 @@ function attachAdminEvents(){
     if(receiverWrap) receiverWrap.style.display=type==='others'?'block':'none';
     if(paidByWrap) paidByWrap.style.display=type==='others'?'block':'none';
     if(statusWrap) statusWrap.style.display=type==='worker_advance'?'block':'none';
+    if(salaryPeriodWrap) salaryPeriodWrap.style.display=type==='worker_salary'?'block':'none';
     if(worker) worker.required=type!=='others';
     if(receiver) receiver.required=type==='others';
     if(paidBy) paidBy.required=type==='others';
@@ -1112,6 +1162,7 @@ function attachAdminEvents(){
     e.preventDefault();
     const f=new FormData(financeForm), type=f.get('type');
     const rec={id:uid('fin'),type,amount:Number(f.get('amount')||0),date:f.get('date'),paymentMethod:f.get('paymentMethod'),remarks:(f.get('remarks')||'').trim()};
+    if(type==='worker_salary') rec.salaryPeriod=f.get('salaryPeriod')||monthKey(f.get('date'));
     if(type==='others'){rec.receiver=(f.get('receiver')||'').trim();rec.paidBy=(f.get('paidBy')||'').trim();}
     else {rec.workerName=f.get('workerName'); const opt=document.querySelector('#finance-worker option:checked'); rec.workerId=opt?.dataset.workerId||state.employees.find(e=>e.name===rec.workerName)?.id||''; if(type==='worker_advance') rec.status=f.get('status')||'Pending';}
     if(!rec.amount || rec.amount<0){showToast('Enter a valid amount');return;}
@@ -1169,7 +1220,7 @@ function renderWorkerShell(){
   if(!worker){ state.role=null; state.currentWorkerId=null; return renderLogin(); }
   const tabs = WORKER_NAV.map(n=>`<button class="tab-btn ${state.workerTab===n.id?'active':''}" data-wtab="${n.id}">${n.label}</button>`).join('');
   return `
-  <div class="main worker-main" style="max-width:760px;margin:0 auto;">
+  <div class="main worker-main">
     <div class="mobile-topbar" style="display:flex;">
       <div class="left-group">
         <button class="hamburger-btn" id="drawer-toggle">☰</button>
@@ -1179,7 +1230,6 @@ function renderWorkerShell(){
     </div>
     <div class="topbar" style="align-items:center;">
       <div><h2>Hi, ${worker.name.split(' ')[0]}</h2><div class="sub">${worker.role||''} · ${worker.code}</div></div>
-      <button class="btn btn-ghost btn-sm" id="logout-btn">Log out</button>
     </div>
     <div class="tab-strip">${tabs}</div>
     ${renderWorkerView(worker)}
@@ -1197,7 +1247,7 @@ function renderWorkerView(worker){
   return '';
 }
 function workerWork(worker){
-  const myWork = state.workOrders.map((w,i)=>({w,i})).filter(x=>x.w.assignedTo===worker.id);
+  const myWork = state.workOrders.map((w,i)=>({w,i})).filter(x=>workAssignedTo(x.w,worker.id));
   const cards = myWork.map(x=>renderWoCard(x.w, x.i, false)).join('') || `
     <div class="empty-state"><div class="mark"></div>No work assigned to you yet. Check back soon.</div>`;
   return cards;
@@ -1257,6 +1307,11 @@ function financeTotals(){
 }
 function monthKey(date){ return (date||'').slice(0,7); }
 function monthLabel(key){ if(!key) return 'Unknown'; const [y,m]=key.split('-'); return new Date(Number(y),Number(m)-1,1).toLocaleDateString(undefined,{month:'long',year:'numeric'}); }
+function salaryPeriodOf(x){ return x.salaryPeriod || monthKey(x.date); }
+function outstandingAdvance(workerId){
+  return state.finance.filter(x=>x.type==='worker_advance' && (x.workerId===workerId || state.employees.find(e=>e.id===workerId)?.name===x.workerName) && (x.status||'Pending')!=='Cleared')
+    .reduce((s,x)=>s+Number(x.amount||0),0);
+}
 function adminFinance(){
   const selectedMonth = state.financeMonth || monthKey(todayStr());
   const monthRecords = state.finance.filter(x=>monthKey(x.date)===selectedMonth);
@@ -1265,22 +1320,22 @@ function adminFinance(){
   const advanceTotal = monthRecords.filter(x=>x.type==='worker_advance').reduce((sum,x)=>sum+Number(x.amount||0),0);
   const otherTotal = monthRecords.filter(x=>x.type==='others').reduce((sum,x)=>sum+Number(x.amount||0),0);
   const salaryRows = state.employees.map(e=>{
-    const paid=monthRecords.filter(x=>x.type==='worker_salary' && (x.workerId===e.id || x.workerName===e.name)).reduce((s,x)=>s+Number(x.amount||0),0);
-    const salary=Number(e.salary||0); const balance=Math.max(0,salary-paid);
+    const paid=state.finance.filter(x=>x.type==='worker_salary' && salaryPeriodOf(x)===selectedMonth && (x.workerId===e.id || x.workerName===e.name)).reduce((s,x)=>s+Number(x.amount||0),0);
+    const salary=Number(e.salary||0); const advance=Math.min(salary, outstandingAdvance(e.id)); const balance=Math.max(0,salary-paid-advance);
     const status=salary>0 && balance<=0 ? 'Cleared' : 'Pending';
-    return `<tr><td>${e.name}</td><td>${money(salary)}</td><td>${money(paid)}</td><td>${money(balance)}</td><td><span class="badge ${status==='Cleared'?'badge-green':'badge-amber'}">${status}</span></td></tr>`;
-  }).join('') || `<tr class="empty-row"><td colspan="5">No employees.</td></tr>`;
+    return `<tr><td>${e.name}</td><td>${money(salary)}</td><td>${money(paid)}</td><td>${money(advance)}</td><td>${money(balance)}</td><td><span class="badge ${status==='Cleared'?'badge-green':'badge-amber'}">${status}</span></td></tr>`;
+  }).join('') || `<tr class="empty-row"><td colspan="6">No employees.</td></tr>`;
   const rows = monthRecords.map(x=>{
     const typeLabel = x.type==='worker_salary' ? 'Worker Salary' : x.type==='worker_advance' ? 'Worker Advance' : 'Other Expenses';
     const person = x.type==='others' ? (x.receiver||'—') : (x.workerName||x.receiver||'—');
     const paidBy = x.type==='others' ? (x.paidBy||'—') : '—';
-    const status = x.type==='worker_advance' ? (x.status||'Pending') : '—';
-    return `<tr><td>${fmtDate(x.date)}</td><td>${typeLabel}</td><td>${person}</td><td>${paidBy}</td><td>${money(x.amount)}</td><td>${x.paymentMethod||'—'}</td><td>${status}</td><td>${x.remarks||'—'}</td><td><button class="icon-btn" data-del-finance="${x.id}">✕</button></td></tr>`;
+    const status = x.type==='worker_advance' ? `<select class="field advance-status-select" data-advance-status="${x.id}"><option ${x.status!=='Cleared'?'selected':''}>Pending</option><option ${x.status==='Cleared'?'selected':''}>Cleared</option></select>${x.clearanceDate?`<div class="record-note">Cleared: ${fmtDate(x.clearanceDate)}</div>`:''}` : '—';
+    return `<tr><td>${fmtDate(x.date)}</td><td>${typeLabel}${x.type==='worker_salary' && x.salaryPeriod ? ' · '+monthLabel(x.salaryPeriod) : ''}</td><td>${person}</td><td>${paidBy}</td><td>${money(x.amount)}</td><td>${x.paymentMethod||'—'}</td><td>${status}</td><td>${x.remarks||'—'}</td><td><button class="icon-btn" data-del-finance="${x.id}">✕</button></td></tr>`;
   }).join('') || `<tr class="empty-row"><td colspan="9">No financial records for ${monthLabel(selectedMonth)}.</td></tr>`;
   return `<div class="topbar"><div><h2>Financials</h2><div class="sub">Month-wise financial dashboard</div></div><input class="field dashboard-date" id="finance-month" type="month" value="${selectedMonth}"></div>
   <div class="grid grid-4" style="margin-bottom:20px"><div class="stat"><div class="lbl">Monthly Total</div><div class="num">${money(total)}</div></div><div class="stat"><div class="lbl">Worker Salary</div><div class="num">${money(salaryTotal)}</div></div><div class="stat"><div class="lbl">Worker Advance</div><div class="num">${money(advanceTotal)}</div></div><div class="stat"><div class="lbl">Other Expenses</div><div class="num">${money(otherTotal)}</div></div></div>
-  <div class="panel"><div class="panel-head"><h3>Worker Salary Status — ${monthLabel(selectedMonth)}</h3></div><div class="table-wrap"><table><thead><tr><th>Worker</th><th>Salary</th><th>Paid Amount</th><th>Balance</th><th>Status</th></tr></thead><tbody>${salaryRows}</tbody></table></div></div>
-  <div class="panel"><div class="panel-head"><h3>Financial Entry</h3></div><form id="finance-form"><div class="form-row"><div><label class="field-label">Type</label><select class="field" id="finance-type" name="type" required><option value="worker_salary">Worker Salary</option><option value="worker_advance">Worker Advance</option><option value="others">Other Expenses</option></select></div><div id="finance-worker-wrap"><label class="field-label">Worker Name</label><select class="field" name="workerName" id="finance-worker"><option value="">Select worker</option>${state.employees.map(e=>`<option value="${e.name}" data-worker-id="${e.id}">${e.name}</option>`).join('')}</select></div><div id="finance-receiver-wrap" style="display:none"><label class="field-label">Receiver</label><input class="field" name="receiver" id="finance-receiver"></div><div id="finance-paidby-wrap" style="display:none"><label class="field-label">Paid By</label><input class="field" name="paidBy" id="finance-paidby"></div><div><label class="field-label">Amount</label><input class="field" type="number" step="0.01" min="0" name="amount" required></div><div><label class="field-label">Date</label><input class="field" type="date" name="date" value="${selectedMonth}-01" required></div><div><label class="field-label">Payment Method</label><select class="field" name="paymentMethod"><option>Cash</option><option>Bank Transfer</option><option>UPI</option><option>Other</option></select></div><div id="finance-status-wrap" style="display:none"><label class="field-label">Advance Status</label><select class="field" name="status"><option>Pending</option><option>Cleared</option></select></div></div><div><label class="field-label">Remarks</label><input class="field" name="remarks"></div><button class="btn btn-primary" type="submit">Save Financial Entry</button></form></div>
+  <div class="panel"><div class="panel-head"><h3>Worker Salary Status — ${monthLabel(selectedMonth)}</h3></div><div class="table-wrap"><table><thead><tr><th>Worker</th><th>Salary</th><th>Paid Amount</th><th>Advance Deduction</th><th>Remaining</th><th>Status</th></tr></thead><tbody>${salaryRows}</tbody></table></div></div>
+  <div class="panel"><div class="panel-head"><h3>Financial Entry</h3></div><form id="finance-form"><div class="form-row"><div><label class="field-label">Type</label><select class="field" id="finance-type" name="type" required><option value="worker_salary">Worker Salary</option><option value="worker_advance">Worker Advance</option><option value="others">Other Expenses</option></select></div><div id="finance-worker-wrap"><label class="field-label">Worker Name</label><select class="field" name="workerName" id="finance-worker"><option value="">Select worker</option>${state.employees.map(e=>`<option value="${e.name}" data-worker-id="${e.id}">${e.name}</option>`).join('')}</select></div><div id="finance-receiver-wrap" style="display:none"><label class="field-label">Receiver</label><input class="field" name="receiver" id="finance-receiver"></div><div id="finance-paidby-wrap" style="display:none"><label class="field-label">Paid By</label><input class="field" name="paidBy" id="finance-paidby"></div><div><label class="field-label">Amount</label><input class="field" type="number" step="0.01" min="0" name="amount" required></div><div><label class="field-label">Payment Date</label><input class="field" type="date" name="date" value="${selectedMonth}-01" required></div><div id="finance-salary-period-wrap"><label class="field-label">Salary Period</label><input class="field" type="month" name="salaryPeriod" value="${selectedMonth}"></div><div><label class="field-label">Payment Method</label><select class="field" name="paymentMethod"><option>Cash</option><option>Bank Transfer</option><option>UPI</option><option>Other</option></select></div><div id="finance-status-wrap" style="display:none"><label class="field-label">Advance Status</label><select class="field" name="status"><option>Pending</option><option>Cleared</option></select></div></div><div><label class="field-label">Remarks</label><input class="field" name="remarks"></div><button class="btn btn-primary" type="submit">Save Financial Entry</button></form></div>
   <div class="panel"><div class="panel-head"><h3>Financial Records — ${monthLabel(selectedMonth)}</h3></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Worker / Receiver</th><th>Paid By</th><th>Amount</th><th>Payment Method</th><th>Status</th><th>Remarks</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
 function adminPowerCuts(){
@@ -1294,7 +1349,6 @@ function adminInvoices(){
 
 /* ---------------- WORKER EVENTS ---------------- */
 function attachWorkerEvents(){
-  const logoutBtn = document.getElementById('logout-btn'); if(logoutBtn) logoutBtn.addEventListener('click', logout);
   const logoutBtnM = document.getElementById('logout-btn-m'); if(logoutBtnM) logoutBtnM.addEventListener('click', logout);
   document.querySelectorAll('[data-wtab]').forEach(el=>el.addEventListener('click', ()=>{ state.workerTab = el.dataset.wtab; render(); }));
   document.querySelectorAll('[name="w-time-method"]').forEach(r=>r.addEventListener('change',()=>{const manual=document.querySelector('input[name="w-time-method"]:checked')?.value!=='clock';const ma=document.getElementById('w-manual-area'),ca=document.getElementById('w-clock-area');if(ma)ma.style.display=manual?'block':'none';if(ca)ca.style.display=manual?'none':'block';}));
@@ -1305,7 +1359,7 @@ function attachWorkerEvents(){
 
   document.querySelectorAll('[data-remarks-save]').forEach(el=>el.addEventListener('click', async ()=>{
     const workId = el.dataset.remarksSave;
-    const w = state.workOrders.find(x=>x.id===workId && x.assignedTo===state.currentWorkerId);
+    const w = state.workOrders.find(x=>x.id===workId && workAssignedTo(x,state.currentWorkerId));
     if(!w) return;
     const input = document.querySelector(`[data-remarks-input="${workId}"]`);
     w.remarks = input ? input.value.trim() : '';
