@@ -430,12 +430,12 @@ async function loadAll(){
     state.invoices     = inv || [];
   }catch(e){ console.error('load error', e); }
 
-  if(state.employees.length===0){
+  /*if(state.employees.length===0){
     state.employees = [
       {id:uid('emp'), name:'Ravi Kumar', code:'EMP001', role:'Machine Operator', phone:''},
       {id:uid('emp'), name:'Meena Iyer', code:'EMP002', role:'Assembly Worker', phone:''},
       {id:uid('emp'), name:'Suresh Babu', code:'EMP003', role:'Quality Checker', phone:''},
-    ];
+    ];*/
     await safeSet('fl_employees', state.employees);
   }
   state.adminAttDate = todayStr();
