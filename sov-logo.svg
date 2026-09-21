@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" rx="96" fill="#0B63CE"/>
-  <path d="M118 152h276v54H184v42h156c30 0 54 24 54 54v42c0 30-24 54-54 54H118v-54h210v-42H172c-30 0-54-24-54-54v-42c0-30 24-54 54-54h222" fill="#fff" opacity=".98"/>
-  <text x="256" y="330" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="82" font-weight="800" fill="#0B63CE">SOV</text>
+  <path d="M118 150h276v58H182v48h150c38 0 62 22 62 57v35c0 39-25 64-66 64H118v-58h210v-48H178c-39 0-60-22-60-58v-34c0-40 24-64 64-64Z" fill="#fff"/>
+  <path d="M256 118l28 56h-56z" fill="#8EC5FF"/>
 </svg>
