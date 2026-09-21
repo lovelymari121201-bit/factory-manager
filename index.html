@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <title>Floorline — Manufacturing Workforce Manager</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="sov-logo.svg">
+<link rel="apple-touch-icon" href="sov-logo.svg">
+<meta name="theme-color" content="#0B63CE">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -256,6 +261,19 @@
   .worker-main .wo-card{width:100%;}
   @media (min-width:861px){.worker-main .panel{width:100%;}.worker-main .form-row{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));}.worker-main .tab-strip{max-width:100%;}.worker-main .table-wrap{max-width:100%;overflow-x:auto;}}
   @media (max-width:600px){.employee-checklist{grid-template-columns:1fr;}.worker-main{padding-left:10px!important;padding-right:10px!important;}.worker-main .wo-top{min-width:0;}.worker-main .wo-top>div:last-child{min-width:0;}.worker-main .panel{overflow:hidden;}.worker-main .table-wrap{overflow-x:auto;max-width:100%;}}
+
+  /* Targeted table responsiveness: wrap text and scroll wide tables instead of breaking the page. */
+  .table-wrap{width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;}
+  .table-wrap table{width:100%;min-width:680px;table-layout:fixed;}
+  .table-wrap th,.table-wrap td{white-space:normal;overflow-wrap:anywhere;word-break:break-word;vertical-align:top;}
+  .modal{position:relative;max-width:calc(100vw - 24px);}
+  .close-x{position:absolute;top:10px;right:10px;z-index:5;}
+  @media(max-width:600px){
+    .table-wrap table{min-width:620px;}
+    .table-wrap th,.table-wrap td{font-size:.82rem;}
+    .modal{width:calc(100vw - 20px);max-height:92vh;overflow-y:auto;padding-top:8px;}
+    .close-x{top:8px;right:8px;}
+  }
 </style>
 <!--
   PRODUCTION DEPLOYMENT:
@@ -277,7 +295,7 @@
 
 const FLOORLINE_API_BASE_URL = (window.FLOORLINE_API_BASE_URL || ((location.protocol==='http:' || location.protocol==='https:') ? location.origin : '')).replace(/\/$/,'');
 
-const STORE_KEYS = ['fl_employees','fl_workorders','fl_attendance','fl_permissions','fl_leaves','fl_sundayot','fl_finance','fl_powercuts','fl_invoices'];
+const STORE_KEYS = ['fl_employees','fl_workorders','fl_workhistory','fl_attendance','fl_permissions','fl_leaves','fl_sundayot','fl_finance','fl_powercuts','fl_invoices'];
 const LOCK_DAYS = 5;
 
 let state = {
@@ -288,6 +306,7 @@ let state = {
   workerTab:'work',
   employees:[],
   workOrders:[],
+  workHistory:[],
   attendance:[],
   permissions:[],
   leaves:[],
@@ -365,9 +384,10 @@ function requestStatusClass(status){
 /* ---------------- persistence ---------------- */
 async function loadAll(){
   try{
-    const [emp, wo, att, perm, lv, ot, fin, pc, inv] = await Promise.all(STORE_KEYS.map(k=>safeGet(k)));
+    const [emp, wo, wh, att, perm, lv, ot, fin, pc, inv] = await Promise.all(STORE_KEYS.map(k=>safeGet(k)));
     state.employees   = emp || [];
     state.workOrders  = (wo || []).map(w=>({ date: todayStr(), ...w, assignedTo: assignedIds(w) }));
+    state.workHistory = (wh || []).map(w=>({ ...w, assignedTo: assignedIds(w) }));
     state.attendance  = att || [];
     state.permissions = (perm || []).map(p=>({ status:'approved', requestedBy:'admin', ...p }));
     state.leaves      = (lv || []).map(l=>({ status:'approved', requestedBy:'admin', ...l }));
@@ -389,6 +409,7 @@ async function loadAll(){
   state.adminDashDate = todayStr();
   state.loaded = true;
   render();
+  startLiveSync();
 }
 
 async function safeGet(key){
@@ -406,6 +427,32 @@ async function safeSet(key, value){
   try{ await window.storage.set(key, JSON.stringify(value), true); return true; }catch(e){ console.error('save failed', key, e); showToast('⚠ Could not save — try again'); return false; }
 }
 function persist(field, key){ return safeSet(key, state[field]); }
+
+let liveSyncTimer=null;
+let liveSyncBusy=false;
+async function syncLatestSharedData(){
+  if(liveSyncBusy || !state.loaded || !state.role) return;
+  liveSyncBusy=true;
+  try{
+    const keys=['fl_employees','fl_workorders','fl_workhistory','fl_attendance','fl_permissions','fl_leaves','fl_sundayot','fl_finance','fl_powercuts','fl_invoices'];
+    const vals=await Promise.all(keys.map(k=>safeGet(k)));
+    const next={
+      employees:vals[0]||[],
+      workOrders:(vals[1]||[]).map(w=>({...w,assignedTo:assignedIds(w)})),
+      workHistory:(vals[2]||[]).map(w=>({...w,assignedTo:assignedIds(w)})),
+      attendance:vals[3]||[], permissions:vals[4]||[], leaves:vals[5]||[], sundayOT:vals[6]||[],
+      finance:(vals[7]||[]), powerCuts:vals[8]||[], invoices:vals[9]||[]
+    };
+    const changed=JSON.stringify(next)!==JSON.stringify({employees:state.employees,workOrders:state.workOrders,workHistory:state.workHistory,attendance:state.attendance,permissions:state.permissions,leaves:state.leaves,sundayOT:state.sundayOT,finance:state.finance,powerCuts:state.powerCuts,invoices:state.invoices});
+    if(changed){ Object.assign(state,next); render(); }
+  }catch(e){ console.error('live sync failed',e); }
+  finally{ liveSyncBusy=false; }
+}
+function startLiveSync(){
+  if(liveSyncTimer) clearInterval(liveSyncTimer);
+  liveSyncTimer=setInterval(syncLatestSharedData,5000);
+}
+
 
 /* ---------------- image resize ---------------- */
 function readAndResizeImage(file, cb){
@@ -564,9 +611,9 @@ async function refreshAdminData(){
   if(adminRefreshBusy || !FLOORLINE_API_BASE_URL || state.role!=='admin') return;
   adminRefreshBusy = true;
   try{
-    const keys=['fl_employees','fl_workorders','fl_attendance','fl_permissions','fl_leaves','fl_sundayot','fl_finance','fl_powercuts','fl_invoices'];
+    const keys=['fl_employees','fl_workorders','fl_workhistory','fl_attendance','fl_permissions','fl_leaves','fl_sundayot','fl_finance','fl_powercuts','fl_invoices'];
     const vals=await Promise.all(keys.map(safeGet));
-    const next={employees:vals[0]||[],workOrders:(vals[1]||[]).map(w=>({...w,assignedTo:assignedIds(w)})),attendance:vals[2]||[],permissions:(vals[3]||[]).map(x=>({status:'approved',requestedBy:'admin',...x})),leaves:(vals[4]||[]).map(x=>({status:'approved',requestedBy:'admin',...x})),sundayOT:vals[5]||[],finance:(vals[6]||[]).map(x=>{if(x.type==='owner_received')return {...x,type:'others'};if(x.type==='worker_paid')return {...x,type:'worker_salary',receiver:x.person||'',paidBy:x.person||'',paymentMethod:x.paymentMethod||'Cash',remarks:x.note||''};if(x.type==='worker_advance')return {...x,status:x.status||'Pending',receiver:x.receiver||x.person||''};return x;}),powerCuts:vals[7]||[],invoices:vals[8]||[]};
+    const next={employees:vals[0]||[],workOrders:(vals[1]||[]).map(w=>({...w,assignedTo:assignedIds(w)})),workHistory:(vals[2]||[]).map(w=>({...w,assignedTo:assignedIds(w)})),attendance:vals[3]||[],permissions:(vals[4]||[]).map(x=>({status:'approved',requestedBy:'admin',...x})),leaves:(vals[5]||[]).map(x=>({status:'approved',requestedBy:'admin',...x})),sundayOT:vals[6]||[],finance:(vals[7]||[]).map(x=>{if(x.type==='owner_received')return {...x,type:'others'};if(x.type==='worker_paid')return {...x,type:'worker_salary',receiver:x.person||'',paidBy:x.person||'',paymentMethod:x.paymentMethod||'Cash',remarks:x.note||''};if(x.type==='worker_advance')return {...x,status:x.status||'Pending',receiver:x.receiver||x.person||''};return x;}),powerCuts:vals[8]||[],invoices:vals[9]||[]};
     let changed=false; Object.keys(next).forEach(k=>{if(JSON.stringify(state[k])!==JSON.stringify(next[k])){state[k]=next[k];changed=true;}});
     if(changed) render();
   }catch(e){console.error('Admin live refresh failed',e);} finally{adminRefreshBusy=false;}
@@ -596,7 +643,8 @@ function adminDashboard(){
   const absent = state.employees.filter(e=>attendanceStatus(e.id,date)==='Absent');
   const sunLeave = state.employees.filter(e=>attendanceStatus(e.id,date)==='Sunday Leave');
   const sunOt = state.employees.filter(e=>attendanceStatus(e.id,date)==='Sunday OT');
-  const dayOrders = state.workOrders.filter(w=>(w.date||'')===date);
+  const allWorkForDashboard = [...state.workOrders, ...state.workHistory];
+  const dayOrders = allWorkForDashboard.filter(w=>(w.date||'')===date);
   const assigned = dayOrders.reduce((s,w)=>s+Number(w.total||0),0);
   const completed = dayOrders.reduce((s,w)=>s+Number(w.completed||0),0);
   const remaining = Math.max(0,assigned-completed);
@@ -613,7 +661,7 @@ function adminDashboard(){
   <div class="grid grid-4" style="margin-bottom:20px;"><div class="stat" style="--stat-color:var(--green)"><div class="lbl">Present</div><div class="num">${present.length}</div></div><div class="stat" style="--stat-color:var(--red)"><div class="lbl">Absent</div><div class="num">${absent.length}</div></div><div class="stat" style="--stat-color:var(--orange)"><div class="lbl">Assigned pieces</div><div class="num">${assigned}</div></div><div class="stat" style="--stat-color:var(--steel)"><div class="lbl">Progress</div><div class="num">${progress}%</div></div></div>
   <div class="grid grid-2"><div class="panel"><div class="panel-head"><h3>Employee Attendance</h3><span class="date-pill">${fmtDate(date)}</span></div><div class="table-wrap"><table><thead><tr><th>Employee</th><th>Status</th></tr></thead><tbody>${people}</tbody></table></div>${isSunday(date)?`<div class="overview-note">Sunday Leave: ${sunLeave.length} · Sunday OT: ${sunOt.length}</div>`:''}</div>
   <div class="panel"><div class="panel-head"><h3>Work Status</h3></div><div class="grid grid-3"><div class="stat"><div class="lbl">Assigned</div><div class="num">${assigned}</div></div><div class="stat"><div class="lbl">Completed</div><div class="num">${completed}</div></div><div class="stat"><div class="lbl">Remaining</div><div class="num">${remaining}</div></div></div><div class="table-wrap" style="margin-top:14px"><table><thead><tr><th>ID</th><th>Work</th><th>Worker</th><th>Progress</th><th>Pieces</th></tr></thead><tbody>${woRows}</tbody></table></div></div></div>
-  <div class="panel"><div class="panel-head"><h3>Daily Work Completion</h3><span class="date-pill">${fmtDate(date)}</span></div><div class="table-wrap"><table><thead><tr><th>Employee</th><th>Parts Completed Today</th></tr></thead><tbody>${state.employees.map(e=>{const count=dayOrders.reduce((sum,w)=>sum+Number((w.dailyCompleted||{})[date+':'+e.id]||0),0);return `<tr><td>${e.name}</td><td><b>${count}</b></td></tr>`}).join('')||`<tr class="empty-row"><td colspan="2">No employees.</td></tr>`}</tbody></table></div></div>
+  <div class="panel"><div class="panel-head"><h3>Daily Work Completion</h3><span class="date-pill">${fmtDate(date)}</span></div><div class="table-wrap"><table><thead><tr><th>Employee</th><th>Pieces Completed</th></tr></thead><tbody>${state.employees.map(e=>{const count=dayOrders.reduce((sum,w)=>sum+Number((w.dailyCompleted||{})[date+':'+e.id]||0),0);return `<tr><td>${e.name}</td><td><b>${count}</b></td></tr>`}).join('')||`<tr class="empty-row"><td colspan="2">No employees.</td></tr>`}</tbody></table></div></div>
   <div class="panel"><div class="panel-head"><h3>Power Cut Timings</h3></div><div class="table-wrap"><table><thead><tr><th>Start</th><th>Restored</th><th>Duration</th><th>Remarks</th></tr></thead><tbody>${cutRows}</tbody></table></div></div>
   <div class="grid grid-2"><div class="panel"><div class="panel-head"><h3>Outward Details</h3></div><div class="table-wrap"><table><thead><tr><th>Invoice/DC</th><th>Part</th><th>Qty</th><th>Method</th></tr></thead><tbody>${invRows(outward)}</tbody></table></div></div><div class="panel"><div class="panel-head"><h3>Inward Details</h3></div><div class="table-wrap"><table><thead><tr><th>Invoice/DC</th><th>Part</th><th>Qty</th><th>Method</th></tr></thead><tbody>${invRows(inward)}</tbody></table></div></div></div>`;
 }
@@ -789,7 +837,8 @@ function adminWork(){
     ${cards}`;
 }
 function adminWorkHistory(){
-  const sorted = [...state.workOrders].map((w,i)=>({w, i})).sort((a,b)=> (b.w.date||'').localeCompare(a.w.date||''));
+  const historyAll = [...state.workOrders, ...state.workHistory];
+  const sorted = historyAll.map((w,i)=>({w, i})).sort((a,b)=> (b.w.date||'').localeCompare(a.w.date||''));
   const rows = sorted.map(({w,i})=>{
     const pct = w.total ? Math.round(w.completed/w.total*100) : 0;
     const remaining = Math.max(0, w.total - w.completed);
@@ -845,6 +894,7 @@ function renderWoCard(w, idx, isAdmin){
         <button class="qty-btn" data-qty-dec="${w.id}">−</button>
         <input class="qty-input" type="number" min="0" max="${w.total}" value="${w.completed}" data-qty-input="${w.id}">
         <button class="qty-btn" data-qty-inc="${w.id}">+</button>
+        ${isAdmin ? `<button class="btn btn-primary btn-sm" data-qty-save="${w.id}">Save count</button>` : ''}
       </div>`}
       ${!isAdmin ? `
       <div class="work-remarks">
@@ -880,11 +930,11 @@ function renderModal(){
     const empOptions = state.employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
     return `<div class="modal-bg" id="modal-bg"><div class="modal"><div class="modal-inner">
       <button class="close-x" id="modal-close">✕</button>
-      <h3>${state.modal.type==='editWork'?'Edit work order':'Assign work'}</h3>
+      <h3>${state.modal.type==='editWork'?'Edit work order':'Create work order'}</h3>
       <div class="login-sub" style="margin-bottom:18px;">Upload a reference image so the worker can identify the item.</div>
       <form id="work-form">
         <label class="field-label">Work / component name</label><input class="field" name="title" required placeholder="e.g. Component Assembly" value="${state.modal.work?.title||''}">
-        <label class="field-label">Assign to worker(s)</label>
+        <label class="field-label">Assign to worker(s) <span style="color:var(--ink-soft);font-weight:400;">(optional — can assign after creation)</span></label>
         <div class="employee-checklist">${state.employees.map(e=>{const checked=assignedIds(state.modal.work||{}).includes(e.id)?' checked':'';return `<label class="employee-check"><input type="checkbox" name="assignedTo" value="${e.id}"${checked}> <span>${e.name}</span></label>`}).join('')}</div>
         <label class="field-label">Total pieces required</label><input class="field" type="number" min="1" name="total" required placeholder="e.g. 1000" value="${state.modal.work?.total??''}">
         <label class="field-label">Instructions (optional)</label><textarea class="field" name="instructions" rows="3" placeholder="Any specific instructions for the worker">${state.modal.work?.instructions||''}</textarea>
@@ -894,7 +944,7 @@ function renderModal(){
         ${state.modalError ? `<div class="form-error">${state.modalError}</div>` : ''}
         <div class="modal-actions">
           <button type="button" class="btn btn-ghost" id="modal-cancel">Cancel</button>
-          <button type="submit" class="btn btn-primary">${state.modal.type==='editWork'?'Save changes':'Assign work'}</button>
+          <button type="submit" class="btn btn-primary">${state.modal.type==='editWork'?'Save changes':'Create work order'}</button>
         </div>
       </form>
     </div></div></div>`;
@@ -964,7 +1014,6 @@ function attachAdminEvents(){
     e.preventDefault();
     const fd = new FormData(workForm);
     const assigned = fd.getAll('assignedTo').filter(Boolean);
-    if(!assigned.length){ state.modalError='Select at least one employee.'; render(); return; }
     if(state.modal.type==='assignWork' && !state.imgDraft){
       state.modalError = 'A reference image is required before you can assign this work.';
       render();
@@ -996,7 +1045,7 @@ function attachAdminEvents(){
     };
     state.workOrders.push(newWork);
     await persist('workOrders','fl_workorders');
-    closeModal(); showToast('Work assigned to ' + empNames(newWork));
+    closeModal(); showToast(assigned.length ? 'Work created and assigned to ' + empNames(newWork) : 'Work order created');
   });
 
   document.querySelectorAll('[data-edit-emp]').forEach(el=>el.addEventListener('click', ()=>{
@@ -1016,9 +1065,14 @@ function attachAdminEvents(){
   }));
 
   document.querySelectorAll('[data-del-work]').forEach(el=>el.addEventListener('click', async ()=>{
-    if(!confirm('Delete this work order?')) return;
+    if(!confirm('Delete this work order? Its historical records will be preserved.')) return;
+    const work=state.workOrders.find(w=>w.id===el.dataset.delWork);
+    if(!work) return;
+    state.workHistory.push({...work, archived:true, archivedAt:Date.now(), archivedReason:'deleted'});
     state.workOrders = state.workOrders.filter(w=>w.id!==el.dataset.delWork);
-    await persist('workOrders','fl_workorders'); render();
+    await persist('workHistory','fl_workhistory');
+    await persist('workOrders','fl_workorders');
+    render();
   }));
 
   document.querySelectorAll('[data-del-leave]').forEach(el=>el.addEventListener('click', async ()=>{
@@ -1265,7 +1319,10 @@ function workerWork(worker){
   const myWork = state.workOrders.map((w,i)=>({w,i})).filter(x=>workAssignedTo(x.w,worker.id));
   const cards = myWork.map(x=>renderWoCard(x.w, x.i, false)).join('') || `
     <div class="empty-state"><div class="mark"></div>No work assigned to you yet. Check back soon.</div>`;
-  return cards;
+  const historyRows = myWork.flatMap(({w})=>Object.entries(w.dailyCompleted||{}).filter(([k])=>k.endsWith(':'+worker.id)).map(([k,v])=>({date:k.split(':')[0],count:Number(v||0),title:w.title})))
+    .sort((a,b)=>b.date.localeCompare(a.date))
+    .map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${x.title}</td><td><b>${x.count}</b></td></tr>`).join('') || `<tr class="empty-row"><td colspan="3">No daily completion records yet.</td></tr>`;
+  return `${cards}<div class="panel"><div class="panel-head"><h3>Today’s Pieces Completed</h3><span class="date-pill">${fmtDate(todayStr())}</span></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Work</th><th>Pieces Completed</th></tr></thead><tbody>${historyRows}</tbody></table></div></div>`;
 }
 function workerAttendance(worker){
   const today=todayStr(); const rec=state.attendance.find(a=>a.employeeId===worker.id&&a.date===today);
@@ -1386,7 +1443,7 @@ function attachWorkerEvents(){
     const date = todayStr();
     w.dailyCompleted = w.dailyCompleted || {};
     const key = date + ':' + state.currentWorkerId;
-    w.dailyCompleted[key] = Math.max(0, Number(w.dailyCompleted[key]||0) + delta);
+    w.dailyCompleted[key] = Math.max(0, Number(w.dailyCompleted[key]||0) + Math.max(0, delta));
     await persist('workOrders','fl_workorders');
     showToast('Work updated'); render();
   }));
