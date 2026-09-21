@@ -1,0 +1,12 @@
+{
+  "name": "SOV Engineering - Floorline",
+  "short_name": "SOV",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#F5F3EF",
+  "theme_color": "#0B63CE",
+  "description": "Floorline Manufacturing Workforce Manager",
+  "icons": [
+    {"src":"sov-logo.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
