@@ -4,9 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <title>Floorline — Manufacturing Workforce Manager</title>
-<link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="sov-logo.svg">
-<link rel="apple-touch-icon" href="sov-logo.svg">
 <meta name="theme-color" content="#0B63CE">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -264,6 +262,10 @@
 
   /* Targeted table responsiveness: wrap text and scroll wide tables instead of breaking the page. */
   .table-wrap{width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;}
+  /* Dashboard tables: keep columns readable and scroll horizontally when needed. */
+  .admin-main .table-wrap{width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;}
+  .admin-main .table-wrap table{min-width:680px;width:max-content;table-layout:fixed;}
+  .admin-main .table-wrap th,.admin-main .table-wrap td{white-space:normal;overflow-wrap:anywhere;word-break:break-word;}
   .table-wrap table{width:100%;min-width:680px;table-layout:fixed;}
   .table-wrap th,.table-wrap td{white-space:normal;overflow-wrap:anywhere;word-break:break-word;vertical-align:top;}
   .modal{position:relative;max-width:calc(100vw - 24px);}
@@ -386,7 +388,7 @@ async function loadAll(){
   try{
     const [emp, wo, wh, att, perm, lv, ot, fin, pc, inv] = await Promise.all(STORE_KEYS.map(k=>safeGet(k)));
     state.employees   = emp || [];
-    state.workOrders  = (wo || []).map(w=>({ date: todayStr(), ...w, assignedTo: assignedIds(w) }));
+    state.workOrders  = (wo || []).map(w=>({ date: todayStr(), ...w, assignedTo: assignedIds(w), completed:Math.max(0,Number(w.completed||0)), total:Math.max(1,Number(w.total||1)) }));
     state.workHistory = (wh || []).map(w=>({ ...w, assignedTo: assignedIds(w) }));
     state.attendance  = att || [];
     state.permissions = (perm || []).map(p=>({ status:'approved', requestedBy:'admin', ...p }));
@@ -431,20 +433,20 @@ function persist(field, key){ return safeSet(key, state[field]); }
 let liveSyncTimer=null;
 let liveSyncBusy=false;
 async function syncLatestSharedData(){
-  if(liveSyncBusy || !state.loaded || !state.role) return;
+  if(liveSyncBusy || !state.loaded || !state.role || state.modal) return;
   liveSyncBusy=true;
   try{
     const keys=['fl_employees','fl_workorders','fl_workhistory','fl_attendance','fl_permissions','fl_leaves','fl_sundayot','fl_finance','fl_powercuts','fl_invoices'];
     const vals=await Promise.all(keys.map(k=>safeGet(k)));
     const next={
       employees:vals[0]||[],
-      workOrders:(vals[1]||[]).map(w=>({...w,assignedTo:assignedIds(w)})),
+      workOrders:(vals[1]||[]).map(w=>({...w,assignedTo:assignedIds(w),completed:Math.max(0,Number(w.completed||0)),total:Math.max(1,Number(w.total||1))})),
       workHistory:(vals[2]||[]).map(w=>({...w,assignedTo:assignedIds(w)})),
       attendance:vals[3]||[], permissions:vals[4]||[], leaves:vals[5]||[], sundayOT:vals[6]||[],
       finance:(vals[7]||[]), powerCuts:vals[8]||[], invoices:vals[9]||[]
     };
     const changed=JSON.stringify(next)!==JSON.stringify({employees:state.employees,workOrders:state.workOrders,workHistory:state.workHistory,attendance:state.attendance,permissions:state.permissions,leaves:state.leaves,sundayOT:state.sundayOT,finance:state.finance,powerCuts:state.powerCuts,invoices:state.invoices});
-    if(changed){ Object.assign(state,next); render(); }
+    if(changed){ Object.assign(state,next); if(!state.modal) render(); }
   }catch(e){ console.error('live sync failed',e); }
   finally{ liveSyncBusy=false; }
 }
@@ -613,7 +615,7 @@ async function refreshAdminData(){
   try{
     const keys=['fl_employees','fl_workorders','fl_workhistory','fl_attendance','fl_permissions','fl_leaves','fl_sundayot','fl_finance','fl_powercuts','fl_invoices'];
     const vals=await Promise.all(keys.map(safeGet));
-    const next={employees:vals[0]||[],workOrders:(vals[1]||[]).map(w=>({...w,assignedTo:assignedIds(w)})),workHistory:(vals[2]||[]).map(w=>({...w,assignedTo:assignedIds(w)})),attendance:vals[3]||[],permissions:(vals[4]||[]).map(x=>({status:'approved',requestedBy:'admin',...x})),leaves:(vals[5]||[]).map(x=>({status:'approved',requestedBy:'admin',...x})),sundayOT:vals[6]||[],finance:(vals[7]||[]).map(x=>{if(x.type==='owner_received')return {...x,type:'others'};if(x.type==='worker_paid')return {...x,type:'worker_salary',receiver:x.person||'',paidBy:x.person||'',paymentMethod:x.paymentMethod||'Cash',remarks:x.note||''};if(x.type==='worker_advance')return {...x,status:x.status||'Pending',receiver:x.receiver||x.person||''};return x;}),powerCuts:vals[8]||[],invoices:vals[9]||[]};
+    const next={employees:vals[0]||[],workOrders:(vals[1]||[]).map(w=>({...w,assignedTo:assignedIds(w),completed:Math.max(0,Number(w.completed||0)),total:Math.max(1,Number(w.total||1))})),workHistory:(vals[2]||[]).map(w=>({...w,assignedTo:assignedIds(w)})),attendance:vals[3]||[],permissions:(vals[4]||[]).map(x=>({status:'approved',requestedBy:'admin',...x})),leaves:(vals[5]||[]).map(x=>({status:'approved',requestedBy:'admin',...x})),sundayOT:vals[6]||[],finance:(vals[7]||[]).map(x=>{if(x.type==='owner_received')return {...x,type:'others'};if(x.type==='worker_paid')return {...x,type:'worker_salary',receiver:x.person||'',paidBy:x.person||'',paymentMethod:x.paymentMethod||'Cash',remarks:x.note||''};if(x.type==='worker_advance')return {...x,status:x.status||'Pending',receiver:x.receiver||x.person||''};return x;}),powerCuts:vals[8]||[],invoices:vals[9]||[]};
     let changed=false; Object.keys(next).forEach(k=>{if(JSON.stringify(state[k])!==JSON.stringify(next[k])){state[k]=next[k];changed=true;}});
     if(changed) render();
   }catch(e){console.error('Admin live refresh failed',e);} finally{adminRefreshBusy=false;}
@@ -636,6 +638,14 @@ function renderAdminView(){
   }
 }
 
+function allWorkRecords(){ return [...state.workOrders, ...state.workHistory]; }
+function dailyPiecesForDate(date, employeeId){
+  return allWorkRecords().reduce((sum,w)=>sum+Number((w.dailyCompleted||{})[date+':'+employeeId]||0),0);
+}
+function dailyPieceRows(date){
+  return state.employees.map(e=>({employee:e,count:dailyPiecesForDate(date,e.id)}));
+}
+
 /* ---- Dashboard ---- */
 function adminDashboard(){
   const date = state.adminDashDate || todayStr();
@@ -643,7 +653,7 @@ function adminDashboard(){
   const absent = state.employees.filter(e=>attendanceStatus(e.id,date)==='Absent');
   const sunLeave = state.employees.filter(e=>attendanceStatus(e.id,date)==='Sunday Leave');
   const sunOt = state.employees.filter(e=>attendanceStatus(e.id,date)==='Sunday OT');
-  const allWorkForDashboard = [...state.workOrders, ...state.workHistory];
+  const allWorkForDashboard = allWorkRecords();
   const dayOrders = allWorkForDashboard.filter(w=>(w.date||'')===date);
   const assigned = dayOrders.reduce((s,w)=>s+Number(w.total||0),0);
   const completed = dayOrders.reduce((s,w)=>s+Number(w.completed||0),0);
@@ -661,7 +671,7 @@ function adminDashboard(){
   <div class="grid grid-4" style="margin-bottom:20px;"><div class="stat" style="--stat-color:var(--green)"><div class="lbl">Present</div><div class="num">${present.length}</div></div><div class="stat" style="--stat-color:var(--red)"><div class="lbl">Absent</div><div class="num">${absent.length}</div></div><div class="stat" style="--stat-color:var(--orange)"><div class="lbl">Assigned pieces</div><div class="num">${assigned}</div></div><div class="stat" style="--stat-color:var(--steel)"><div class="lbl">Progress</div><div class="num">${progress}%</div></div></div>
   <div class="grid grid-2"><div class="panel"><div class="panel-head"><h3>Employee Attendance</h3><span class="date-pill">${fmtDate(date)}</span></div><div class="table-wrap"><table><thead><tr><th>Employee</th><th>Status</th></tr></thead><tbody>${people}</tbody></table></div>${isSunday(date)?`<div class="overview-note">Sunday Leave: ${sunLeave.length} · Sunday OT: ${sunOt.length}</div>`:''}</div>
   <div class="panel"><div class="panel-head"><h3>Work Status</h3></div><div class="grid grid-3"><div class="stat"><div class="lbl">Assigned</div><div class="num">${assigned}</div></div><div class="stat"><div class="lbl">Completed</div><div class="num">${completed}</div></div><div class="stat"><div class="lbl">Remaining</div><div class="num">${remaining}</div></div></div><div class="table-wrap" style="margin-top:14px"><table><thead><tr><th>ID</th><th>Work</th><th>Worker</th><th>Progress</th><th>Pieces</th></tr></thead><tbody>${woRows}</tbody></table></div></div></div>
-  <div class="panel"><div class="panel-head"><h3>Daily Work Completion</h3><span class="date-pill">${fmtDate(date)}</span></div><div class="table-wrap"><table><thead><tr><th>Employee</th><th>Pieces Completed</th></tr></thead><tbody>${state.employees.map(e=>{const count=dayOrders.reduce((sum,w)=>sum+Number((w.dailyCompleted||{})[date+':'+e.id]||0),0);return `<tr><td>${e.name}</td><td><b>${count}</b></td></tr>`}).join('')||`<tr class="empty-row"><td colspan="2">No employees.</td></tr>`}</tbody></table></div></div>
+  <div class="panel"><div class="panel-head"><h3>Daily Work Completion</h3><span class="date-pill">${fmtDate(date)}</span></div><div class="table-wrap"><table><thead><tr><th>Employee</th><th>Pieces Completed</th></tr></thead><tbody>${dailyPieceRows(date).map(({employee:e,count})=>`<tr><td>${e.name}</td><td><b>${count}</b></td></tr>`).join('')||`<tr class="empty-row"><td colspan="2">No employees.</td></tr>`}</tbody></table></div></div>
   <div class="panel"><div class="panel-head"><h3>Power Cut Timings</h3></div><div class="table-wrap"><table><thead><tr><th>Start</th><th>Restored</th><th>Duration</th><th>Remarks</th></tr></thead><tbody>${cutRows}</tbody></table></div></div>
   <div class="grid grid-2"><div class="panel"><div class="panel-head"><h3>Outward Details</h3></div><div class="table-wrap"><table><thead><tr><th>Invoice/DC</th><th>Part</th><th>Qty</th><th>Method</th></tr></thead><tbody>${invRows(outward)}</tbody></table></div></div><div class="panel"><div class="panel-head"><h3>Inward Details</h3></div><div class="table-wrap"><table><thead><tr><th>Invoice/DC</th><th>Part</th><th>Qty</th><th>Method</th></tr></thead><tbody>${invRows(inward)}</tbody></table></div></div></div>`;
 }
@@ -882,7 +892,7 @@ function renderWoCard(w, idx, isAdmin){
       <div>
         <div class="wo-id">${woNumber(idx)} · ${fmtDate(w.date)} · ${pct>=100?'<span class="badge badge-green">Complete</span>':'<span class="badge badge-steel">In progress</span>'} ${locked?'<span class="badge badge-locked">Locked</span>':''}</div>
         <div class="wo-title">${w.title}</div>
-        <div class="wo-meta">Assigned to <b>${empNames(w)}</b>${isAdmin && !locked ?` · <button class="icon-btn" style="width:auto;height:auto;padding:2px 6px;border:none;color:var(--steel)" data-edit-work="${w.id}">Edit</button> <button class="icon-btn" style="width:auto;height:auto;padding:2px 6px;border:none;color:var(--red)" data-del-work="${w.id}">Delete</button>`:''}</div>
+        <div class="wo-meta">Assigned to <b>${empNames(w)}</b>${isAdmin && !locked ?` · <button class="icon-btn" style="width:auto;height:auto;padding:2px 6px;border:none;color:var(--steel)" data-assign-work="${w.id}">Assign</button> <button class="icon-btn" style="width:auto;height:auto;padding:2px 6px;border:none;color:var(--steel)" data-edit-work="${w.id}">Edit</button> <button class="icon-btn" style="width:auto;height:auto;padding:2px 6px;border:none;color:var(--red)" data-del-work="${w.id}">Delete</button>`:''}</div>
       </div>
     </div>
     ${w.instructions ? `<div class="wo-instr">${w.instructions}</div>` : ''}
@@ -926,6 +936,18 @@ function renderModal(){
       </form>
     </div></div></div>`;
   }
+  if(state.modal.type==='assignEmployees'){
+    const w=state.modal.work;
+    return `<div class="modal-bg" id="modal-bg"><div class="modal"><div class="modal-inner">
+      <button class="close-x" id="modal-close">✕</button>
+      <h3>Assign Employees</h3>
+      <div class="login-sub" style="margin-bottom:18px;">Select the employee(s) for <b>${w?.title||'this part'}</b>.</div>
+      <form id="assign-employees-form">
+        <div class="employee-checklist">${state.employees.map(e=>{const checked=assignedIds(w||{}).includes(e.id)?' checked':'';return `<label class="employee-check"><input type="checkbox" name="assignedTo" value="${e.id}"${checked}> <span>${e.name}</span></label>`}).join('')}</div>
+        <div class="modal-actions"><button type="button" class="btn btn-ghost" id="modal-cancel">Cancel</button><button type="submit" class="btn btn-primary">Save assignment</button></div>
+      </form>
+    </div></div></div>`;
+  }
   if(state.modal.type==='assignWork' || state.modal.type==='editWork'){
     const empOptions = state.employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
     return `<div class="modal-bg" id="modal-bg"><div class="modal"><div class="modal-inner">
@@ -934,8 +956,7 @@ function renderModal(){
       <div class="login-sub" style="margin-bottom:18px;">Upload a reference image so the worker can identify the item.</div>
       <form id="work-form">
         <label class="field-label">Work / component name</label><input class="field" name="title" required placeholder="e.g. Component Assembly" value="${state.modal.work?.title||''}">
-        <label class="field-label">Assign to worker(s) <span style="color:var(--ink-soft);font-weight:400;">(optional — can assign after creation)</span></label>
-        <div class="employee-checklist">${state.employees.map(e=>{const checked=assignedIds(state.modal.work||{}).includes(e.id)?' checked':'';return `<label class="employee-check"><input type="checkbox" name="assignedTo" value="${e.id}"${checked}> <span>${e.name}</span></label>`}).join('')}</div>
+        <div class="record-note" style="margin-bottom:14px;">Create the work/part first. Employee assignment is done after creation.</div>
         <label class="field-label">Total pieces required</label><input class="field" type="number" min="1" name="total" required placeholder="e.g. 1000" value="${state.modal.work?.total??''}">
         <label class="field-label">Instructions (optional)</label><textarea class="field" name="instructions" rows="3" placeholder="Any specific instructions for the worker">${state.modal.work?.instructions||''}</textarea>
         <label class="field-label">Reference image <span class="required-star">*required</span></label>
@@ -1013,7 +1034,7 @@ function attachAdminEvents(){
   if(workForm) workForm.addEventListener('submit', async (e)=>{
     e.preventDefault();
     const fd = new FormData(workForm);
-    const assigned = fd.getAll('assignedTo').filter(Boolean);
+    const assigned = state.modal.work ? assignedIds(state.modal.work) : [];
     if(state.modal.type==='assignWork' && !state.imgDraft){
       state.modalError = 'A reference image is required before you can assign this work.';
       render();
@@ -1023,7 +1044,7 @@ function attachAdminEvents(){
       const w=state.workOrders.find(x=>x.id===state.modal.work.id);
       if(!w){ closeModal(); return; }
       w.title=fd.get('title').trim();
-      w.assignedTo=assigned;
+      /* Employee assignment is managed separately after creation. */
       w.total=Math.max(1,Number(fd.get('total')||1));
       w.completed=Math.min(w.total,Number(w.completed||0));
       w.instructions=fd.get('instructions').trim();
@@ -1035,7 +1056,7 @@ function attachAdminEvents(){
     const newWork = {
       id: uid('wo'),
       title: fd.get('title').trim(),
-      assignedTo: assigned,
+      assignedTo: [],
       total: Number(fd.get('total')),
       completed: 0,
       instructions: fd.get('instructions').trim(),
@@ -1058,6 +1079,21 @@ function attachAdminEvents(){
     state.employees = state.employees.filter(e=>e.id!==el.dataset.delEmp);
     await persist('employees','fl_employees'); render();
   }));
+
+  document.querySelectorAll('[data-assign-work]').forEach(el=>el.addEventListener('click', ()=>{
+    const work=state.workOrders.find(w=>w.id===el.dataset.assignWork);
+    if(work){state.modal={type:'assignEmployees',work};state.modalError='';render();}
+  }));
+
+  const assignEmployeesForm=document.getElementById('assign-employees-form');
+  if(assignEmployeesForm) assignEmployeesForm.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const w=state.workOrders.find(x=>x.id===state.modal.work?.id);
+    if(!w) return;
+    w.assignedTo=new FormData(assignEmployeesForm).getAll('assignedTo').filter(Boolean);
+    await persist('workOrders','fl_workorders');
+    closeModal(); showToast('Employee assignment updated');
+  });
 
   document.querySelectorAll('[data-edit-work]').forEach(el=>el.addEventListener('click', ()=>{
     const work=state.workOrders.find(w=>w.id===el.dataset.editWork);
@@ -1104,7 +1140,7 @@ function attachAdminEvents(){
   }));
 
   const dashDate=document.getElementById('admin-dash-date');
-  if(dashDate) dashDate.addEventListener('change',()=>{state.adminDashDate=dashDate.value;render();});
+  if(dashDate){ const applyDashDate=()=>{ const v=dashDate.value; if(v){ state.adminDashDate=v; render(); } }; dashDate.addEventListener('change',applyDashDate); dashDate.addEventListener('input',applyDashDate); }
 
   const powerForm=document.getElementById('powercut-form');
   if(powerForm){
@@ -1316,13 +1352,15 @@ function renderWorkerView(worker){
   return '';
 }
 function workerWork(worker){
+  const allMine = allWorkRecords().map((w,i)=>({w,i})).filter(x=>workAssignedTo(x.w,worker.id));
   const myWork = state.workOrders.map((w,i)=>({w,i})).filter(x=>workAssignedTo(x.w,worker.id));
   const cards = myWork.map(x=>renderWoCard(x.w, x.i, false)).join('') || `
     <div class="empty-state"><div class="mark"></div>No work assigned to you yet. Check back soon.</div>`;
-  const historyRows = myWork.flatMap(({w})=>Object.entries(w.dailyCompleted||{}).filter(([k])=>k.endsWith(':'+worker.id)).map(([k,v])=>({date:k.split(':')[0],count:Number(v||0),title:w.title})))
+  const historyRows = allMine.flatMap(({w})=>Object.entries(w.dailyCompleted||{}).filter(([k])=>k.endsWith(':'+worker.id)).map(([k,v])=>({date:k.split(':')[0],count:Number(v||0),title:w.title})))
     .sort((a,b)=>b.date.localeCompare(a.date))
     .map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${x.title}</td><td><b>${x.count}</b></td></tr>`).join('') || `<tr class="empty-row"><td colspan="3">No daily completion records yet.</td></tr>`;
-  return `${cards}<div class="panel"><div class="panel-head"><h3>Today’s Pieces Completed</h3><span class="date-pill">${fmtDate(todayStr())}</span></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Work</th><th>Pieces Completed</th></tr></thead><tbody>${historyRows}</tbody></table></div></div>`;
+  const todayPieces=dailyPiecesForDate(todayStr(),worker.id);
+  return `${cards}<div class="panel"><div class="panel-head"><h3>Today’s Pieces Completed</h3><b>${todayPieces}</b><span class="date-pill">${fmtDate(todayStr())}</span></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Work</th><th>Pieces Completed</th></tr></thead><tbody>${historyRows}</tbody></table></div></div>`;
 }
 function workerAttendance(worker){
   const today=todayStr(); const rec=state.attendance.find(a=>a.employeeId===worker.id&&a.date===today);
@@ -1443,7 +1481,7 @@ function attachWorkerEvents(){
     const date = todayStr();
     w.dailyCompleted = w.dailyCompleted || {};
     const key = date + ':' + state.currentWorkerId;
-    w.dailyCompleted[key] = Math.max(0, Number(w.dailyCompleted[key]||0) + Math.max(0, delta));
+    w.dailyCompleted[key] = Math.max(0, Number(w.dailyCompleted[key]||0) + delta);
     await persist('workOrders','fl_workorders');
     showToast('Work updated'); render();
   }));
