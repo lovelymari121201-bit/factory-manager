@@ -337,6 +337,7 @@ let state = {
   currentWorkerId:null,
   adminView:'dashboard',
   workerTab:'work',
+  dashboardView:'overview',
   employees:[],
   workOrders:[],
   workHistory:[],
@@ -370,6 +371,13 @@ function assignedIds(w){ if(Array.isArray(w.assignedTo)) return w.assignedTo; if
 function empNames(w){ const ids=assignedIds(w); return ids.length ? ids.map(empName).join(', ') : 'Unassigned'; }
 function workAssignedTo(w, empId){ return assignedIds(w).includes(empId); }
 function empName(id){ const e=state.employees.find(x=>x.id===id); return e?e.name:'Unassigned'; }
+async function hashPin(pin){
+  const data=new TextEncoder().encode(String(pin));
+  const buf=await crypto.subtle.digest('SHA-256',data);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function employeePinHash(e){ return e?.pinHash || ''; }
+
 function showToast(msg){ state.toast=msg; render(); setTimeout(()=>{ state.toast=null; render(); }, 2400); }
 function daysSince(dateStr){ const a=new Date(todayStr()+'T00:00:00'); const b=new Date(dateStr+'T00:00:00'); return Math.round((a-b)/86400000); }
 function isLocked(w){ return daysSince(w.date || todayStr()) >= LOCK_DAYS; }
@@ -477,13 +485,16 @@ async function syncLatestSharedData(){
       finance:(vals[7]||[]), powerCuts:vals[8]||[], invoices:vals[9]||[]
     };
     const changed=JSON.stringify(next)!==JSON.stringify({employees:state.employees,workOrders:state.workOrders,workHistory:state.workHistory,attendance:state.attendance,permissions:state.permissions,leaves:state.leaves,sundayOT:state.sundayOT,finance:state.finance,powerCuts:state.powerCuts,invoices:state.invoices});
-    if(changed){ Object.assign(state,next); if(!state.modal) render(); }
+    if(changed){ Object.assign(state,next); const active=document.activeElement; const editing=active && ['INPUT','TEXTAREA','SELECT'].includes(active.tagName); if(!state.modal && !editing) render(); }
   }catch(e){ console.error('live sync failed',e); }
   finally{ liveSyncBusy=false; }
 }
 function startLiveSync(){
-  if(liveSyncTimer){ clearInterval(liveSyncTimer); liveSyncTimer=null; }
-  // No automatic polling: it previously re-rendered the app while users were typing.
+  if(liveSyncTimer) clearInterval(liveSyncTimer);
+  liveSyncTimer=setInterval(async ()=>{
+    if(document.hidden || state.modal || liveSyncBusy) return;
+    await syncLatestSharedData();
+  },2500);
 }
 
 
@@ -514,6 +525,7 @@ function render(){
   if(!state.loaded){ app.innerHTML = `<div class="loading-screen">LOADING FLOORLINE…</div>`; return; }
   if(!state.role){ app.innerHTML = renderLogin(); attachLoginEvents(); return; }
   if(state.role==='admin'){ app.innerHTML = renderAdminShell(); attachAdminEvents(); attachGlobalEvents(); return; }
+  if(state.role==='dashboard'){ app.innerHTML = renderDashboardShell(); attachDashboardEvents(); attachGlobalEvents(); return; }
   if(state.role==='worker'){ app.innerHTML = renderWorkerShell(); attachWorkerEvents(); attachGlobalEvents(); return; }
 }
 
@@ -554,39 +566,53 @@ function renderLogin(){
       <div class="login-sub">Attendance · assignments · production tracking</div>
       <div class="role-row">
         <button class="role-btn ${loginRole==='worker'?'active':''}" data-role="worker">Worker</button>
+        <button class="role-btn ${loginRole==='dashboard'?'active':''}" data-role="dashboard">Dashboard</button>
         <button class="role-btn ${loginRole==='admin'?'active':''}" data-role="admin">Admin</button>
       </div>
       ${loginRole==='admin' ? `
         <label class="field-label">Admin PIN</label>
         <input type="password" class="field" id="admin-pin" placeholder="Enter PIN" maxlength="12">
+      ` : loginRole==='dashboard' ? `
+        <div class="login-sub" style="margin:10px 0 18px;">Read-only floor dashboard. No edit or delete permissions.</div>
       ` : `
         <label class="field-label">Select your name</label>
         <select class="field" id="worker-select">
           <option value="">— Choose your name —</option>
           ${workerOptions}
         </select>
+        <label class="field-label">Worker PIN</label>
+        <input type="password" class="field" id="worker-pin" placeholder="Enter your assigned PIN" maxlength="12" inputmode="numeric" autocomplete="off">
       `}
       ${loginError ? `<div class="login-error">${loginError}</div>` : ''}
       <button class="btn btn-primary" id="login-btn">Continue</button>
-      <div class="login-hint">Admin PIN for this demo is <b>1234</b>. Workers pick their name from the list an admin has set up.</div>
+      <div class="login-hint">Workers must use the PIN assigned to their employee account.</div>
     </div>
   </div>`;
 }
 function attachLoginEvents(){
   document.querySelectorAll('.role-btn').forEach(b=>b.addEventListener('click', ()=>{ loginRole=b.dataset.role; loginError=''; render(); }));
-  document.getElementById('login-btn').addEventListener('click', ()=>{
+  document.getElementById('login-btn').addEventListener('click', async ()=>{
     if(loginRole==='admin'){
       const pin = document.getElementById('admin-pin').value;
       if(pin!=='admin@8056'){ loginError='Incorrect PIN.'; render(); return; }
       state.role='admin'; state.adminView='dashboard'; loginError=''; render();
+    }else if(loginRole==='dashboard'){
+      state.role='dashboard'; state.adminView='dashboard'; loginError=''; render();
     }else{
       const wid = document.getElementById('worker-select').value;
+      const pin = document.getElementById('worker-pin').value.trim();
       if(!wid){ loginError='Please select your name.'; render(); return; }
+      if(!pin){ loginError='Please enter your PIN.'; render(); return; }
+      const worker=state.employees.find(e=>e.id===wid);
+      if(!worker || !employeePinHash(worker)){ loginError='No PIN is assigned to this employee. Ask Admin to set a PIN.'; render(); return; }
+      const enteredHash=await hashPin(pin);
+      if(enteredHash!==employeePinHash(worker)){ loginError='Incorrect PIN.'; render(); return; }
       state.role='worker'; state.workerTab='work'; state.currentWorkerId=wid; loginError=''; render();
     }
   });
 }
-function logout(){ state.role=null; state.currentWorkerId=null; state.adminView='dashboard'; state.workerTab='work'; loginError=''; loginRole='worker'; state.drawerOpen=false; render(); }
+
+function logout(){ state.role=null; state.currentWorkerId=null; state.adminView='dashboard'; state.dashboardView='overview'; state.workerTab='work'; loginError=''; loginRole='worker'; state.drawerOpen=false; render(); }
 
 /* ================= ADMIN SHELL ================= */
 const ADMIN_NAV = [
@@ -706,14 +732,14 @@ function adminDashboard(){
   const inward = state.invoices.filter(x=>x.date===date && x.type==='Inward');
   const recentWork = currentWorks.filter(w=>Math.max(0,Number(w.total||0)-Number(w.completed||0))>0).slice(0,50);
   const woRows = recentWork.map(w=>{const p=w.total?Math.round(Math.min(Number(w.completed||0),Number(w.total||0))/Number(w.total)*100):0;const pending=Math.max(0,Number(w.total||0)-Number(w.completed||0));return `<tr><td><b>${woNumber(state.workOrders.indexOf(w))}</b></td><td>${w.title}</td><td>${empNames(w)}</td><td><b>${p}%</b></td><td><b>${pending}</b></td></tr>`}).join('')||`<tr class="empty-row"><td colspan="5">No pending work.</td></tr>`;
-  const people = state.employees.map(e=>`<tr><td>${e.name}</td><td><span class="badge ${statusBadgeClass(attendanceStatus(e.id,date))}">${attendanceStatus(e.id,date)}</span></td></tr>`).join('')||`<tr class="empty-row"><td colspan="2">No employees.</td></tr>`;
+  const people = state.employees.map(e=>{const rec=state.attendance.find(a=>a.employeeId===e.id&&a.date===date);const status=attendanceStatus(e.id,date);return `<tr><td>${e.name}</td><td>${rec?.inTime||'—'}</td><td>${rec?.outTime||'—'}</td><td><span class="badge ${statusBadgeClass(status)}">${status}</span></td></tr>`}).join('')||`<tr class="empty-row"><td colspan="4">No employees.</td></tr>`;
   const cutRows=cuts.map(x=>`<tr><td>${x.startTime||'—'}</td><td>${x.endTime||'—'}</td><td>${x.duration||calcHours(x.startTime,x.endTime)} hrs</td><td>${x.remarks||'—'}</td></tr>`).join('')||`<tr class="empty-row"><td colspan="4">No power-cut records.</td></tr>`;
   const invRows=(arr)=>arr.map(x=>`<tr><td>${x.number||'—'}</td><td>${x.partName||'—'}</td><td>${x.quantity||0}</td><td>${x.method||'—'}${x.method==='Vehicle'&&x.vehicleNumber?' · '+x.vehicleNumber:''}</td></tr>`).join('')||`<tr class="empty-row"><td colspan="4">No records.</td></tr>`;
   return `<div class="dashboard-page">
     <div class="dashboard-hero"><div><div class="eyebrow">Floor overview</div><h2>Dashboard</h2><div class="sub">Attendance, production and daily activity at a glance.</div></div><div class="dashboard-date-box"><label class="field-label">View date</label><input class="field dashboard-date" type="date" id="admin-dash-date" value="${date}" aria-label="Dashboard date"></div></div>
     <div class="dashboard-stat-grid"><div class="dashboard-stat stat-green"><span>Present</span><b>${present.length}</b></div><div class="dashboard-stat stat-red"><span>Absent</span><b>${absent.length}</b></div><div class="dashboard-stat stat-orange"><span>Assigned pieces</span><b>${assigned}</b></div><div class="dashboard-stat stat-blue"><span>Progress</span><b>${progress}%</b></div></div>
     <div class="dashboard-grid">
-      <div class="panel dashboard-card"><div class="panel-head"><h3>Employee Attendance</h3><span class="date-pill">${fmtDate(date)}</span></div><div class="table-wrap dashboard-table-scroll"><table><thead><tr><th>Employee</th><th>Status</th></tr></thead><tbody>${people}</tbody></table></div>${isSunday(date)?`<div class="overview-note">Sunday Leave: ${sunLeave.length} · Sunday OT: ${sunOt.length}</div>`:''}</div>
+      <div class="panel dashboard-card"><div class="panel-head"><h3>Employee Attendance</h3><span class="date-pill">${fmtDate(date)}</span></div><div class="table-wrap dashboard-table-scroll"><table><thead><tr><th>Employee</th><th>In Time</th><th>Out Time</th><th>Status</th></tr></thead><tbody>${people}</tbody></table></div>${isSunday(date)?`<div class="overview-note">Sunday Leave: ${sunLeave.length} · Sunday OT: ${sunOt.length}</div>`:''}</div>
       <div class="panel dashboard-card"><div class="panel-head"><h3>Work Status</h3></div><div class="dashboard-mini-stats"><div><span>Assigned</span><b>${assigned}</b></div><div><span>Completed</span><b>${completed}</b></div><div><span>Remaining</span><b>${remaining}</b></div></div><div class="table-wrap dashboard-table-scroll"><table><thead><tr><th>ID</th><th>Work</th><th>Worker</th><th>Progress</th><th>Pending Pieces</th></tr></thead><tbody>${woRows}</tbody></table></div></div>
     </div>
     <div class="dashboard-grid dashboard-grid-wide"><div class="panel dashboard-card"><div class="panel-head"><h3>Daily Work Completion</h3><span class="date-pill">${fmtDate(date)}</span></div><div class="table-wrap dashboard-table-scroll"><table><thead><tr><th>Employee</th><th>Work Name</th><th>Pieces Completed</th></tr></thead><tbody>${dailyPieceRows(date).map(({employee:e,workName,count})=>`<tr><td>${e?.name||'Unassigned'}</td><td><b>${workName}</b></td><td><b>${count}</b></td></tr>`).join('')||`<tr class="empty-row"><td colspan="3">No completed pieces.</td></tr>`}</tbody></table></div></div><div class="panel dashboard-card"><div class="panel-head"><h3>Power Cut Timings</h3></div><div class="table-wrap dashboard-table-scroll"><table><thead><tr><th>Start</th><th>Restored</th><th>Duration</th><th>Remarks</th></tr></thead><tbody>${cutRows}</tbody></table></div></div></div>
@@ -975,6 +1001,7 @@ function renderModal(){
         <label class="field-label">Role / department</label><input class="field" name="role" placeholder="e.g. Assembly Worker" value="${state.modal.employee?.role||''}">
         <label class="field-label">Phone (optional)</label><input class="field" name="phone" placeholder="" value="${state.modal.employee?.phone||''}">
         <label class="field-label">Monthly Salary</label><input class="field" type="number" min="0" step="0.01" name="salary" required value="${state.modal.employee?.salary??''}">
+        <label class="field-label">Worker PIN ${state.modal.type==='editEmployee'?'(leave blank to keep current PIN)':''}</label><input class="field" type="password" name="pin" maxlength="12" inputmode="numeric" autocomplete="new-password" placeholder="Set unique PIN">
         <div class="modal-actions">
           <button type="button" class="btn btn-ghost" id="modal-cancel">Cancel</button>
           <button type="submit" class="btn btn-primary">${state.modal.type==='editEmployee'?'Save changes':'Add employee'}</button>
@@ -1044,22 +1071,27 @@ function attachAdminEvents(){
     e.preventDefault();
     const fd = new FormData(empForm);
     const name=fd.get('name').trim(), code=fd.get('code').trim();
-    const duplicate=state.employees.find(e=>e.id!==(state.modal.employee?.id||'') && (e.code||'').toLowerCase()===code.toLowerCase());
+    const existingId=state.modal.employee?.id||'';
+    const duplicate=state.employees.find(e=>e.id!==existingId && (e.code||'').toLowerCase()===code.toLowerCase());
     if(duplicate){showToast('Employee code already exists');return;}
-    const duplicateName=state.employees.find(e=>e.id!==(state.modal.employee?.id||'') && (e.name||'').toLowerCase()===name.toLowerCase());
+    const duplicateName=state.employees.find(e=>e.id!==existingId && (e.name||'').toLowerCase()===name.toLowerCase());
     if(duplicateName){showToast('Employee name already exists');return;}
     const salary=Number(fd.get('salary')||0);
     if(salary<0){showToast('Enter a valid salary');return;}
-    if(state.modal.type==='editEmployee'){
-      const emp=state.employees.find(e=>e.id===state.modal.employee.id);
-      if(emp) Object.assign(emp,{name,code,role:fd.get('role').trim(),phone:fd.get('phone').trim(),salary});
-    }else{
-      state.employees.push({id:uid('emp'),name,code,role:fd.get('role').trim(),phone:fd.get('phone').trim(),salary});
-    }
+    const pin=String(fd.get('pin')||'').trim();
+    const isEdit=state.modal.type==='editEmployee';
+    const emp=isEdit ? state.employees.find(e=>e.id===existingId) : null;
+    let pinHash=emp?.pinHash||'';
+    if(pin){
+      const candidate=await hashPin(pin);
+      if(state.employees.some(e=>e.id!==existingId && employeePinHash(e)===candidate)){showToast('This PIN is already assigned to another employee');return;}
+      pinHash=candidate;
+    }else if(!isEdit){showToast('Please set a unique PIN for this employee');return;}
+    const data={name,code,role:fd.get('role').trim(),phone:fd.get('phone').trim(),salary,pinHash};
+    if(emp) Object.assign(emp,data); else state.employees.push({id:uid('emp'),...data});
     await persist('employees','fl_employees');
-    const wasEdit=state.modal.type==='editEmployee'; closeModal(); showToast(wasEdit?'Employee updated':'Employee added');
+    closeModal(); showToast(isEdit?'Employee updated':'Employee added');
   });
-
   const imgTrigger = document.getElementById('img-upload-trigger');
   const imgFileInput = document.getElementById('img-file-input');
   if(imgTrigger){
@@ -1359,8 +1391,23 @@ function attachQtyEvents(){
   }));
 }
 
+function renderDashboardShell(){
+  return `<div class="main"><div class="topbar"><div><h2>Floorline Dashboard</h2><div class="sub">Read-only dashboard</div></div><button class="btn btn-ghost btn-sm" id="dashboard-logout">Log out</button></div>${adminDashboard()}</div>${renderLightbox()}${state.toast?`<div class="toast">${state.toast}</div>`:''}`;
+}
+function attachDashboardEvents(){
+  const b=document.getElementById('dashboard-logout'); if(b) b.addEventListener('click',logout);
+  const d=document.getElementById('admin-dash-date'); if(d) d.addEventListener('change',()=>{state.adminDashDate=d.value||todayStr();render();});
+}
+function workerDashboard(worker){
+  const date=state.workerDashDate||todayStr();
+  const attendance=state.attendance.find(a=>a.employeeId===worker.id&&a.date===date);
+  const works=allWorkRecords().filter(w=>workAssignedTo(w,worker.id));
+  const rows=works.flatMap(w=>{const count=Number((w.dailyCompleted||{})[date+':'+worker.id]||0);return count?[{name:w.title||'Work',count}]:[];}).map(x=>`<tr><td>${x.name}</td><td><b>${x.count}</b></td></tr>`).join('')||`<tr class="empty-row"><td colspan="2">No completed pieces.</td></tr>`;
+  return `<div class="panel"><div class="panel-head"><h3>My Dashboard</h3><div><label class="field-label">Date</label><input class="field" id="worker-dash-date" type="date" value="${date}" max="${todayStr()}"></div></div><div class="grid grid-3"><div class="stat"><div class="num">${attendance?.inTime||'—'}</div><div class="lbl">In Time</div></div><div class="stat"><div class="num">${attendance?.outTime||'—'}</div><div class="lbl">Out Time</div></div><div class="stat"><div class="num">${works.length}</div><div class="lbl">Assigned Works</div></div></div></div><div class="panel"><div class="panel-head"><h3>Completed Pieces</h3></div><div class="table-wrap"><table><thead><tr><th>Work Name</th><th>Pieces</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+}
 /* ================= WORKER SHELL ================= */
 const WORKER_NAV = [
+  {id:'dashboard', label:'Dashboard', ico:'▣'},
   {id:'work', label:'My Work', ico:'▤'},
   {id:'attendance', label:'Attendance', ico:'⏱'},
   {id:'leave', label:'Leave', ico:'☐'},
@@ -1391,6 +1438,7 @@ function renderWorkerShell(){
   `;
 }
 function renderWorkerView(worker){
+  if(state.workerTab==='dashboard') return workerDashboard(worker);
   if(state.workerTab==='work') return workerWork(worker);
   if(state.workerTab==='attendance') return workerAttendance(worker);
   if(state.workerTab==='leave') return workerLeave(worker);
@@ -1515,6 +1563,7 @@ function adminInvoices(){
 function attachWorkerEvents(){
   const logoutBtnM = document.getElementById('logout-btn-m'); if(logoutBtnM) logoutBtnM.addEventListener('click', logout);
   document.querySelectorAll('[data-wtab]').forEach(el=>el.addEventListener('click', ()=>{ state.workerTab = el.dataset.wtab; render(); }));
+  const workerDashDate=document.getElementById('worker-dash-date'); if(workerDashDate) workerDashDate.addEventListener('change',()=>{state.workerDashDate=workerDashDate.value||todayStr();render();});
   const workerPiecesDate=document.getElementById('worker-pieces-date'); if(workerPiecesDate) workerPiecesDate.addEventListener('change',()=>{state.workerPiecesDate=workerPiecesDate.value||todayStr(); render();});
   document.querySelectorAll('[name="w-time-method"]').forEach(r=>r.addEventListener('change',()=>{const manual=document.querySelector('input[name="w-time-method"]:checked')?.value!=='clock';const ma=document.getElementById('w-manual-area'),ca=document.getElementById('w-clock-area');if(ma)ma.style.display=manual?'block':'none';if(ca)ca.style.display=manual?'none':'block';}));
 
