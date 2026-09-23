@@ -676,7 +676,15 @@ function dailyPiecesForDate(date, employeeId){
   return allWorkRecords().reduce((sum,w)=>sum+Number((w.dailyCompleted||{})[date+':'+employeeId]||0),0);
 }
 function dailyPieceRows(date){
-  return state.employees.map(e=>({employee:e,count:dailyPiecesForDate(date,e.id)}));
+  const rows=[];
+  allWorkRecords().forEach(w=>{
+    const ids=assignedIds(w);
+    ids.forEach(employeeId=>{
+      const count=Number((w.dailyCompleted||{})[date+':'+employeeId]||0);
+      if(count>0) rows.push({employeeId,employee:state.employees.find(e=>e.id===employeeId),workName:w.title||'Work',count,workId:w.id});
+    });
+  });
+  return rows;
 }
 
 /* ---- Dashboard ---- */
@@ -708,7 +716,7 @@ function adminDashboard(){
       <div class="panel dashboard-card"><div class="panel-head"><h3>Employee Attendance</h3><span class="date-pill">${fmtDate(date)}</span></div><div class="table-wrap dashboard-table-scroll"><table><thead><tr><th>Employee</th><th>Status</th></tr></thead><tbody>${people}</tbody></table></div>${isSunday(date)?`<div class="overview-note">Sunday Leave: ${sunLeave.length} · Sunday OT: ${sunOt.length}</div>`:''}</div>
       <div class="panel dashboard-card"><div class="panel-head"><h3>Work Status</h3></div><div class="dashboard-mini-stats"><div><span>Assigned</span><b>${assigned}</b></div><div><span>Completed</span><b>${completed}</b></div><div><span>Remaining</span><b>${remaining}</b></div></div><div class="table-wrap dashboard-table-scroll"><table><thead><tr><th>ID</th><th>Work</th><th>Worker</th><th>Progress</th><th>Pending Pieces</th></tr></thead><tbody>${woRows}</tbody></table></div></div>
     </div>
-    <div class="dashboard-grid dashboard-grid-wide"><div class="panel dashboard-card"><div class="panel-head"><h3>Daily Work Completion</h3><span class="date-pill">${fmtDate(date)}</span></div><div class="table-wrap dashboard-table-scroll"><table><thead><tr><th>Employee</th><th>Pieces Completed</th></tr></thead><tbody>${dailyPieceRows(date).map(({employee:e,count})=>`<tr><td>${e.name}</td><td><b>${count}</b></td></tr>`).join('')||`<tr class="empty-row"><td colspan="2">No employees.</td></tr>`}</tbody></table></div></div><div class="panel dashboard-card"><div class="panel-head"><h3>Power Cut Timings</h3></div><div class="table-wrap dashboard-table-scroll"><table><thead><tr><th>Start</th><th>Restored</th><th>Duration</th><th>Remarks</th></tr></thead><tbody>${cutRows}</tbody></table></div></div></div>
+    <div class="dashboard-grid dashboard-grid-wide"><div class="panel dashboard-card"><div class="panel-head"><h3>Daily Work Completion</h3><span class="date-pill">${fmtDate(date)}</span></div><div class="table-wrap dashboard-table-scroll"><table><thead><tr><th>Employee</th><th>Work Name</th><th>Pieces Completed</th></tr></thead><tbody>${dailyPieceRows(date).map(({employee:e,workName,count})=>`<tr><td>${e?.name||'Unassigned'}</td><td><b>${workName}</b></td><td><b>${count}</b></td></tr>`).join('')||`<tr class="empty-row"><td colspan="3">No completed pieces.</td></tr>`}</tbody></table></div></div><div class="panel dashboard-card"><div class="panel-head"><h3>Power Cut Timings</h3></div><div class="table-wrap dashboard-table-scroll"><table><thead><tr><th>Start</th><th>Restored</th><th>Duration</th><th>Remarks</th></tr></thead><tbody>${cutRows}</tbody></table></div></div></div>
     <div class="dashboard-grid"><div class="panel dashboard-card"><div class="panel-head"><h3>Outward Details</h3></div><div class="table-wrap dashboard-table-scroll"><table><thead><tr><th>Invoice/DC</th><th>Part</th><th>Qty</th><th>Method</th></tr></thead><tbody>${invRows(outward)}</tbody></table></div></div><div class="panel dashboard-card"><div class="panel-head"><h3>Inward Details</h3></div><div class="table-wrap dashboard-table-scroll"><table><thead><tr><th>Invoice/DC</th><th>Part</th><th>Qty</th><th>Method</th></tr></thead><tbody>${invRows(inward)}</tbody></table></div></div></div>
   </div>`;
 }
@@ -1395,11 +1403,16 @@ function workerWork(worker){
   const myWork = state.workOrders.map((w,i)=>({w,i})).filter(x=>workAssignedTo(x.w,worker.id));
   const cards = myWork.map(x=>renderWoCard(x.w, x.i, false)).join('') || `
     <div class="empty-state"><div class="mark"></div>No work assigned to you yet. Check back soon.</div>`;
-  const dailyRows = myWork.map(({w})=>{
+
+  // Completion history is read from both active and archived work orders.
+  // Archived records remain available after an admin deletes the original work order.
+  const historyRecords = allWorkRecords().flatMap(w=>{
     const count=Number((w.dailyCompleted||{})[selectedDate+':'+worker.id]||0);
-    if(!count) return '';
-    return `<div class="daily-piece-row"><b>${count} pieces</b><span>– ${w.title||'Work'}</span></div>`;
-  }).join('') || `<div class="sub">No pieces recorded for ${fmtDate(selectedDate)}.</div>`;
+    const snapshots=(w.completionHistory||[]).filter(x=>x.date===selectedDate && x.employeeId===worker.id);
+    if(snapshots.length) return snapshots.map(x=>({workName:x.workName||w.title||'Work',count:Number(x.pieces||0),workId:w.id})).filter(x=>x.count>0);
+    return count>0 ? [{workName:w.title||'Work',count,workId:w.id}] : [];
+  });
+  const dailyRows = historyRecords.map(x=>`<div class="daily-piece-row"><b>${x.count} pieces</b><span>– ${x.workName}</span></div>`).join('') || `<div class="sub">No pieces recorded for ${fmtDate(selectedDate)}.</div>`;
   return `${cards}<div class="panel daily-pieces-panel"><div class="panel-head"><div><h3>Today’s Pieces Completed</h3><div class="sub">View date-wise completed pieces and work name.</div></div><div><label class="field-label">Date</label><input class="field" id="worker-pieces-date" type="date" value="${selectedDate}" max="${today}"></div></div><div class="daily-piece-list">${dailyRows}</div></div>`;
 }
 
@@ -1525,6 +1538,19 @@ function attachWorkerEvents(){
     w.dailyCompleted = w.dailyCompleted || {};
     const key = date + ':' + state.currentWorkerId;
     w.dailyCompleted[key] = Math.max(0, Number(w.dailyCompleted[key]||0) + delta);
+    if(delta>0){
+      w.completionHistory = Array.isArray(w.completionHistory) ? w.completionHistory : [];
+      w.completionHistory.push({
+        id:uid('wch'),
+        workId:w.id,
+        employeeId:state.currentWorkerId,
+        date,
+        workName:w.title||'Work',
+        pieces:delta,
+        cumulativeCompleted:newCompleted,
+        recordedAt:Date.now()
+      });
+    }
     await persist('workOrders','fl_workorders');
     showToast('Work updated'); render();
   }));
