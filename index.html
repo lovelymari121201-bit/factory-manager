@@ -594,7 +594,7 @@ function attachLoginEvents(){
   document.getElementById('login-btn').addEventListener('click', async ()=>{
     if(loginRole==='admin'){
       const pin = document.getElementById('admin-pin').value;
-      if(pin!=='admin@8056'){ loginError='Incorrect PIN.'; render(); return; }
+      if(pin!=='admin123'){ loginError='Incorrect PIN.'; render(); return; }
       state.role='admin'; state.adminView='dashboard'; loginError=''; render();
     }else if(loginRole==='dashboard'){
       state.role='dashboard'; state.adminView='dashboard'; loginError=''; render();
